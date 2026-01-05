@@ -4,27 +4,16 @@ import { mapWiseStatus } from "../../../../lib/wiseStatus";
 
 export const runtime = "nodejs";
 
-/**
- * Reconciliación automática contra Wise
- * - Crea transferencias nuevas
- * - Actualiza estados existentes
- */
 export async function GET() {
   try {
-    const headers = {
-      Authorization: `Bearer ${process.env.WISE_API_TOKEN}`,
-    };
-
-    // 1️⃣ Obtener transferencias recientes desde Wise
-   const res = await fetch(
-  `https://api.wise.com/v1/profiles/${process.env.WISE_PROFILE_ID}/transfers?limit=50`,
-  {
-    headers: {
-      Authorization: `Bearer ${process.env.WISE_API_TOKEN}`,
-    },
-  }
-);
-
+    const res = await fetch(
+      `https://api.wise.com/v1/profiles/${process.env.WISE_PROFILE_ID}/transfers?limit=50`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WISE_API_TOKEN}`,
+        },
+      }
+    );
 
     if (!res.ok) {
       throw new Error("Wise API error");
@@ -37,22 +26,25 @@ export async function GET() {
 
     for (const transfer of transfers) {
       const wiseId = transfer.id.toString();
-
       const mapped = mapWiseStatus(transfer.status);
 
-      // 2️⃣ Buscar en DB por wiseTransferId
       const existing = await prisma.transaction.findUnique({
         where: { wiseTransferId: wiseId },
       });
 
-      // 🆕 NO EXISTE → CREAR
+      const occurredAt = transfer.updated
+        ? new Date(transfer.updated)
+        : new Date();
+
       if (!existing) {
         await prisma.transaction.create({
           data: {
-            publicId: wiseId, // 👈 MISMO ID DE WISE
+            publicId: wiseId, // 👈 mismo ID Wise
             wiseTransferId: wiseId,
             businessName:
-              transfer.recipient?.name ?? "Cliente",
+              transfer.recipient?.name ||
+              transfer.details?.reference ||
+              "RW Capital Holding",
             amount: transfer.amount.value,
             currency: transfer.amount.currency,
             status: mapped.publicStatus,
@@ -60,7 +52,7 @@ export async function GET() {
             events: {
               create: {
                 label: mapped.labelES,
-                occurredAt: new Date(transfer.updated),
+                occurredAt,
               },
             },
           },
@@ -70,7 +62,6 @@ export async function GET() {
         continue;
       }
 
-      // 🔄 EXISTE → ACTUALIZAR SI CAMBIÓ
       if (existing.status !== mapped.publicStatus) {
         await prisma.transaction.update({
           where: { id: existing.id },
@@ -79,7 +70,7 @@ export async function GET() {
             events: {
               create: {
                 label: mapped.labelES,
-                occurredAt: new Date(transfer.updated),
+                occurredAt,
               },
             },
           },
