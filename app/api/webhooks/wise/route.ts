@@ -29,9 +29,6 @@ function verifySignature(rawBody: string, signature: string | null) {
 /* ──────────────────────────────
    ID PÚBLICO (ROBUSTO)
 ────────────────────────────── */
-function generatePublicId() {
-  return `RWC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-}
 
 /* ──────────────────────────────
    WEBHOOK HANDLER
@@ -55,40 +52,44 @@ export async function POST(request: NextRequest) {
        1️⃣ TRANSFER CREATED (IDEMPOTENTE)
     ────────────────────────────── */
     if (event_type === "transfer.created") {
-      const existing = await prisma.transaction.findUnique({
-        where: { wiseTransferId: data.transfer_id },
-      });
+  const wiseId = data.transfer_id.toString();
 
-      if (existing) {
-        return NextResponse.json({
-          ok: true,
-          idempotent: true,
-          publicId: existing.publicId,
-        });
-      }
+  const existing = await prisma.transaction.findUnique({
+    where: { wiseTransferId: wiseId },
+  });
 
-      const publicId = generatePublicId();
+  if (existing) {
+    return NextResponse.json({
+      ok: true,
+      idempotent: true,
+      publicId: existing.publicId,
+    });
+  }
 
-      await prisma.transaction.create({
-        data: {
-          publicId,
-          wiseTransferId: data.transfer_id,
-          businessName: "RW Capital Holding, Inc.",
-          amount: data.amount.value,
-          currency: data.amount.currency,
-          status: "PENDING",
-          reference: data.reference ?? null,
-          events: {
-            create: {
-              label: "El remitente ha creado tu transferencia",
-              occurredAt: new Date(data.occurred_at),
-            },
-          },
+  await prisma.transaction.create({
+    data: {
+      publicId: wiseId,        // 👈 ID visible
+      wiseTransferId: wiseId,  // 👈 mismo ID
+      businessName: "RW Capital Holding, Inc.",
+      amount: data.amount.value,
+      currency: data.amount.currency,
+      status: "PENDING",
+      reference: data.reference ?? null,
+      events: {
+        create: {
+          label: "El remitente ha creado tu transferencia",
+          occurredAt: new Date(data.occurred_at),
         },
-      });
+      },
+    },
+  });
 
-      return NextResponse.json({ ok: true, created: true, publicId });
-    }
+  return NextResponse.json({
+    ok: true,
+    created: true,
+    publicId: wiseId,
+  });
+}
 
     /* ──────────────────────────────
        2️⃣ STATUS CHANGED
