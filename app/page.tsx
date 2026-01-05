@@ -1,10 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function HomePage() {
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState("");
   const router = useRouter();
 
   function handleSubmit(e: React.FormEvent) {
@@ -14,33 +15,60 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-black">
-      <div className="w-full max-w-md rounded-xl bg-zinc-900 p-6 shadow-lg">
-        <h1 className="text-2xl font-semibold text-white mb-2">
-          Transaction Tracker
+    <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-xl p-8 animate-fade-up">
+
+        {/* LOGO */}
+        <div className="flex justify-center mb-8 animate-fade-in-slow">
+          <Image
+            src="/logo.png"
+            alt="RW Capital Holding"
+            width={220}
+            height={90}
+            priority
+          />
+        </div>
+
+        {/* TITLE */}
+        <h1 className="text-xl font-semibold text-center mb-2">
+          Seguimiento de transferencia
         </h1>
 
-        <p className="text-sm text-zinc-400 mb-6">
-          Enter your transaction tracking ID
+        <p className="text-sm text-neutral-400 text-center mb-6">
+          Ingresa tu código de seguimiento para ver el estado de tu operación
         </p>
 
+        {/* FORM */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
-            placeholder="e.g. RWC-TEST-001"
+            placeholder="Ej: RWC-TEST-001"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className="w-full rounded-md bg-zinc-800 border border-zinc-700 px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            className="
+              w-full rounded-lg bg-neutral-950 border border-neutral-800
+              px-4 py-3 text-sm text-white
+              placeholder-neutral-500
+              focus:outline-none focus:ring-2 focus:ring-yellow-500
+            "
           />
 
           <button
             type="submit"
-            className="w-full rounded-md bg-yellow-500 py-2 font-medium text-black hover:bg-yellow-400 transition"
+            className="
+              w-full bg-yellow-500 hover:bg-yellow-400 text-black
+              font-medium py-3 rounded-lg transition
+            "
           >
-            Track Transaction
+            Consultar estado
           </button>
         </form>
+
+        {/* FOOTER */}
+        <p className="mt-6 text-xs text-neutral-500 text-center">
+          RW Capital Holding · Secure transfer tracking
+        </p>
       </div>
-    </main>
+    </div>
   );
 }
