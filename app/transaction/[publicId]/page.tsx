@@ -42,8 +42,8 @@ export default async function TransactionPage({
         <Image
           src="/logo.png"
           alt="RW Capital Holding"
-          width={160}
-          height={40}
+          width={200}
+          height={80}
           priority
         />
       </div>
