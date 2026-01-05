@@ -16,10 +16,15 @@ export async function GET() {
     };
 
     // 1️⃣ Obtener transferencias recientes desde Wise
-    const res = await fetch(
-      "https://api.wise.com/v1/transfers?limit=50",
-      { headers }
-    );
+   const res = await fetch(
+  `https://api.wise.com/v1/profiles/${process.env.WISE_PROFILE_ID}/transfers?limit=50`,
+  {
+    headers: {
+      Authorization: `Bearer ${process.env.WISE_API_TOKEN}`,
+    },
+  }
+);
+
 
     if (!res.ok) {
       throw new Error("Wise API error");
