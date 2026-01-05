@@ -8,10 +8,10 @@ type TimelineEvent = {
 type Transaction = {
   publicId: string;
   businessName: string;
-  amount: string; // 👈 ya viene como string desde la API
+  amount: string;
   currency: string;
   status: string;
-  events: TimelineEvent[];
+  timeline: TimelineEvent[];
 };
 
 async function getTransaction(publicId: string): Promise<Transaction | null> {
@@ -30,7 +30,6 @@ export default async function TransactionPage({
   params: Promise<{ publicId: string }>;
 }) {
   const { publicId } = await params;
-
   const tx = await getTransaction(publicId);
 
   if (!tx) notFound();
@@ -39,7 +38,6 @@ export default async function TransactionPage({
     <div className="min-h-screen bg-neutral-950 text-white flex justify-center px-4 py-10">
       <div className="w-full max-w-xl bg-neutral-900 rounded-xl border border-neutral-800 p-8">
 
-        {/* HEADER */}
         <h1 className="text-2xl font-semibold mb-1">
           {tx.status === "COMPLETED"
             ? "Transferencia completada"
@@ -50,7 +48,6 @@ export default async function TransactionPage({
           {tx.businessName}
         </p>
 
-        {/* INFO */}
         <div className="mb-6 border border-neutral-800 rounded-lg p-4 text-sm space-y-2">
           <div className="flex justify-between">
             <span className="text-neutral-400">Monto</span>
@@ -67,10 +64,9 @@ export default async function TransactionPage({
           </div>
         </div>
 
-        {/* TIMELINE */}
-        {tx.events.length > 0 && (
+        {tx.timeline.length > 0 && (
           <ol className="relative border-l border-yellow-500 ml-2">
-            {tx.events.map((e, i) => (
+            {tx.timeline.map((e, i) => (
               <li key={i} className="mb-6 ml-6">
                 <span className="absolute -left-1.5 w-3 h-3 bg-yellow-500 rounded-full" />
                 <p className="text-xs text-neutral-400">
@@ -82,11 +78,9 @@ export default async function TransactionPage({
           </ol>
         )}
 
-        {/* FOOTER */}
         <div className="mt-8 text-xs text-neutral-500 text-center">
           RW Capital Holding · Transaction Tracker
         </div>
-
       </div>
     </div>
   );
