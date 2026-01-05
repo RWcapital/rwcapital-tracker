@@ -1,3 +1,5 @@
+// lib/wiseStatus.ts
+
 export type WiseStatus =
   | "incoming_payment_waiting"
   | "incoming_payment_received"
@@ -8,69 +10,69 @@ export type WiseStatus =
   | "failed"
   | "charged_back";
 
-export function mapWiseStatus(status: WiseStatus) {
+export function mapWiseStatus(status: WiseStatus | string) {
   switch (status) {
     case "incoming_payment_waiting":
       return {
         publicStatus: "PENDING",
-        es: "Esperando fondos del remitente",
-        en: "Waiting for sender funds",
+        labelES: "Esperando fondos del remitente",
+        labelEN: "Waiting for sender funds",
       };
 
     case "incoming_payment_received":
       return {
         publicStatus: "FUNDS_RECEIVED",
-        es: "Fondos recibidos",
-        en: "Funds received",
+        labelES: "Fondos recibidos",
+        labelEN: "Funds received",
       };
 
     case "processing":
       return {
         publicStatus: "PROCESSING",
-        es: "Procesando transferencia",
-        en: "Processing transfer",
+        labelES: "Procesando transferencia",
+        labelEN: "Processing transfer",
       };
 
     case "funds_sent":
       return {
         publicStatus: "SENT",
-        es: "Fondos enviados al banco",
-        en: "Funds sent to bank",
+        labelES: "Fondos enviados al banco",
+        labelEN: "Funds sent to bank",
       };
 
     case "completed":
       return {
         publicStatus: "COMPLETED",
-        es: "Transferencia completada",
-        en: "Transfer completed",
+        labelES: "Transferencia completada",
+        labelEN: "Transfer completed",
       };
 
     case "cancelled":
       return {
         publicStatus: "CANCELLED",
-        es: "Transferencia cancelada",
-        en: "Transfer cancelled",
+        labelES: "Transferencia cancelada",
+        labelEN: "Transfer cancelled",
       };
 
     case "failed":
       return {
         publicStatus: "FAILED",
-        es: "Transferencia fallida",
-        en: "Transfer failed",
+        labelES: "Transferencia fallida",
+        labelEN: "Transfer failed",
       };
 
     case "charged_back":
       return {
         publicStatus: "REVERSED",
-        es: "Transferencia reversada",
-        en: "Transfer reversed",
+        labelES: "Transferencia reversada",
+        labelEN: "Transfer reversed",
       };
 
     default:
       return {
         publicStatus: "UNKNOWN",
-        es: "Estado desconocido",
-        en: "Unknown status",
+        labelES: "Estado actualizado",
+        labelEN: "Status updated",
       };
   }
 }

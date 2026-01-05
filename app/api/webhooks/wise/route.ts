@@ -99,17 +99,18 @@ export async function POST(request: NextRequest) {
       const mapped = mapWiseStatus(data.status);
 
       await prisma.transaction.update({
-        where: { id: tx.id },
-        data: {
-          status: mapped.publicStatus,
-          events: {
-            create: {
-              label: mapped.label,
-              occurredAt: new Date(data.occurred_at),
-            },
-          },
-        },
-      });
+  where: { id: tx.id },
+  data: {
+    status: mapped.publicStatus,
+    events: {
+      create: {
+        label: mapped.labelES,
+        occurredAt: new Date(data.occurred_at),
+      },
+    },
+  },
+});
+
 
       return NextResponse.json({
         ok: true,
