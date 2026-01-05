@@ -4,35 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-/* =========================
-   VALIDACIÓN TRACKING CODE
-   ========================= */
-function isValidTrackingCode(value: string) {
-  return /^RWC-\d+$/.test(value.trim());
-}
-
 export default function HomePage() {
   const [code, setCode] = useState("");
-  const [error, setError] = useState("");
   const router = useRouter();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const trimmed = code.trim();
+    const value = code.trim().toUpperCase();
+    if (!value) return;
 
-    if (!trimmed) {
-      setError("Ingresa un código de seguimiento");
-      return;
-    }
-
-    if (!isValidTrackingCode(trimmed)) {
-      setError("Formato inválido. Ej: RWC-1767607940321");
-      return;
-    }
-
-    setError("");
-    router.push(`/transaction/${trimmed}`);
+    router.push(`/transaction/${value}`);
   }
 
   return (
@@ -56,7 +38,7 @@ export default function HomePage() {
         </h1>
 
         <p className="text-sm text-neutral-400 text-center mb-6">
-          Ingresa tu código de seguimiento para ver el estado de tu operación
+          Ingresa tu código de seguimiento proporcionado por RW Capital
         </p>
 
         {/* FORM */}
@@ -65,33 +47,20 @@ export default function HomePage() {
             type="text"
             placeholder="Ej: RWC-1767607940321"
             value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
-              setError("");
-            }}
-            className={`
-              w-full rounded-lg bg-neutral-950 border
+            onChange={(e) => setCode(e.target.value)}
+            className="
+              w-full rounded-lg bg-neutral-950 border border-neutral-800
               px-4 py-3 text-sm text-white
               placeholder-neutral-500
-              focus:outline-none focus:ring-2
-              ${
-                error
-                  ? "border-red-500 focus:ring-red-500"
-                  : "border-neutral-800 focus:ring-yellow-500"
-              }
-            `}
+              focus:outline-none focus:ring-2 focus:ring-yellow-500
+            "
           />
-
-          {error && (
-            <p className="text-xs text-red-400">{error}</p>
-          )}
 
           <button
             type="submit"
             className="
-              w-full bg-yellow-500 hover:bg-yellow-400
-              text-black font-medium py-3 rounded-lg
-              transition
+              w-full bg-yellow-500 hover:bg-yellow-400 text-black
+              font-medium py-3 rounded-lg transition
             "
           >
             Consultar estado
