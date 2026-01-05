@@ -40,7 +40,7 @@ export default async function TransactionPage({
       <div className="w-full max-w-xl bg-neutral-900 rounded-xl border border-neutral-800 p-8 animate-fade-up">
      <div className="flex justify-center mb-6 animate-fade-in">
         <Image
-          src="/logo.svg"
+          src="/logo.png"
           alt="RW Capital Holding"
           width={160}
           height={40}
