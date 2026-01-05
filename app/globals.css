@@ -24,6 +24,22 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ───────────────── Fade In ───────────────── */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out both;
+}
+
+/* ───────────────── Fade Up ───────────────── */
 @keyframes fade-up {
   from {
     opacity: 0;
@@ -36,13 +52,14 @@ body {
 }
 
 .animate-fade-up {
-  animation: fade-up 0.6s ease-out both;
+  animation: fade-up 0.8s ease-out both;
 }
 
-@keyframes fadeInSlow {
+/* ───────────── Fade In Slow (Wise style) ───────────── */
+@keyframes fade-in-slow {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -51,7 +68,5 @@ body {
 }
 
 .animate-fade-in-slow {
-  animation: fadeInSlow 1.4s ease-out forwards;
+  animation: fade-in-slow 1.4s ease-out both;
 }
-
-

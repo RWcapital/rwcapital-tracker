@@ -38,33 +38,31 @@ export default async function TransactionPage({
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex justify-center px-4 py-10">
       <div className="w-full max-w-xl bg-neutral-900 rounded-xl border border-neutral-800 p-8 animate-fade-up">
-     <div className="flex justify-center mb-6 animate-fade-in">
-        <Image
-          src="/logo.png"
-          alt="RW Capital Holding"
-          width={200}
-          height={80}
-          priority
-        />
-      </div>
 
+        {/* LOGO */}
+        <div className="flex justify-center mb-8 animate-fade-in">
+          <Image
+            src="/logo.png"
+            alt="RW Capital Holding"
+            width={240}   // 🔼 un poco más grande
+            height={90}
+            priority
+          />
+        </div>
 
-       <h1
-  className={`text-2xl font-semibold mb-1 animate-fade-in ${
-    tx.status !== "COMPLETED" ? "animate-pulse" : ""
-  }`}
->
-  {tx.status === "COMPLETED"
-    ? "Transferencia completada"
-    : "Transferencia en proceso"}
-</h1>
+        {/* TITLE */}
+        <h1 className="text-2xl font-semibold mb-1 animate-fade-in-slow">
+          {tx.status === "COMPLETED"
+            ? "Transferencia completada"
+            : "Transferencia en proceso"}
+        </h1>
 
-
-        <p className="text-neutral-400 text-sm mb-6">
+        <p className="text-neutral-400 text-sm mb-6 animate-fade-in-slow">
           {tx.businessName}
         </p>
 
-        <div className="mb-6 border border-neutral-800 rounded-lg p-4 text-sm space-y-2">
+        {/* INFO BOX */}
+        <div className="mb-6 border border-neutral-800 rounded-lg p-4 text-sm space-y-2 animate-fade-in-slow">
           <div className="flex justify-between">
             <span className="text-neutral-400">Monto</span>
             <span className="font-medium">
@@ -80,14 +78,15 @@ export default async function TransactionPage({
           </div>
         </div>
 
+        {/* TIMELINE */}
         {tx.timeline.length > 0 && (
           <ol className="relative border-l border-yellow-500 ml-2">
             {tx.timeline.map((e, i) => (
               <li
-    key={i}
-    className="mb-6 ml-6 animate-fade-in"
-    style={{ animationDelay: `${i * 120}ms` }}
-  >
+                key={i}
+                className="mb-6 ml-6 animate-fade-in-slow"
+                style={{ animationDelay: `${i * 160}ms` }} // ⏱ más lento y elegante
+              >
                 <span className="absolute -left-1.5 w-3 h-3 bg-yellow-500 rounded-full" />
                 <p className="text-xs text-neutral-400">
                   {new Date(e.date).toLocaleString()}
@@ -97,10 +96,22 @@ export default async function TransactionPage({
             ))}
           </ol>
         )}
+        {/* BOTÓN DESCARGA PDF */}
+<a
+  href={`/api/receipt/${tx.publicId}`}
+  target="_blank"
+  className="mt-6 inline-block w-full text-center bg-yellow-500 hover:bg-yellow-400 text-black font-medium py-2 rounded-lg transition"
+>
+  Descargar comprobante (PDF)
+</a>
 
-        <div className="mt-8 text-xs text-neutral-500 text-center">
+
+
+        {/* FOOTER */}
+        <div className="mt-10 text-xs text-neutral-500 text-center animate-fade-in-slow">
           RW Capital Holding · Transaction Tracker
         </div>
+
       </div>
     </div>
   );
