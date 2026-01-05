@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "../../../../lib/prisma";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fs from "fs";
 import path from "path";
