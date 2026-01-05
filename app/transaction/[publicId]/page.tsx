@@ -35,6 +35,10 @@ export default async function TransactionPage({
 
   if (!tx) notFound();
 
+  // ✅ FIX DEFINITIVO: normalización robusta del status
+  const isCompleted =
+    tx.status?.toUpperCase().trim() === "COMPLETED";
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex justify-center px-4 py-10">
       <div className="w-full max-w-xl bg-neutral-900 rounded-xl border border-neutral-800 p-8 animate-fade-up">
@@ -44,7 +48,7 @@ export default async function TransactionPage({
           <Image
             src="/logo.png"
             alt="RW Capital Holding"
-            width={240}   // 🔼 un poco más grande
+            width={240}
             height={90}
             priority
           />
@@ -52,7 +56,7 @@ export default async function TransactionPage({
 
         {/* TITLE */}
         <h1 className="text-2xl font-semibold mb-1 animate-fade-in-slow">
-          {tx.status === "COMPLETED"
+          {isCompleted
             ? "Transferencia completada"
             : "Transferencia en proceso"}
         </h1>
@@ -85,7 +89,7 @@ export default async function TransactionPage({
               <li
                 key={i}
                 className="mb-6 ml-6 animate-fade-in-slow"
-                style={{ animationDelay: `${i * 160}ms` }} // ⏱ más lento y elegante
+                style={{ animationDelay: `${i * 160}ms` }}
               >
                 <span className="absolute -left-1.5 w-3 h-3 bg-yellow-500 rounded-full" />
                 <p className="text-xs text-neutral-400">
@@ -96,22 +100,20 @@ export default async function TransactionPage({
             ))}
           </ol>
         )}
-        {/* BOTÓN DESCARGA PDF */}
-<a
-  href={`/api/receipt/${tx.publicId}`}
-  target="_blank"
-  className="mt-6 inline-block w-full text-center bg-yellow-500 hover:bg-yellow-400 text-black font-medium py-2 rounded-lg transition"
->
-  Descargar comprobante (PDF)
-</a>
 
-
+        {/* BOTÓN PDF */}
+        <a
+          href={`/api/receipt/${tx.publicId}`}
+          target="_blank"
+          className="mt-6 inline-block w-full text-center bg-yellow-500 hover:bg-yellow-400 text-black font-medium py-2 rounded-lg transition"
+        >
+          Descargar comprobante (PDF)
+        </a>
 
         {/* FOOTER */}
         <div className="mt-10 text-xs text-neutral-500 text-center animate-fade-in-slow">
           RW Capital Holding · Transaction Tracker
         </div>
-
       </div>
     </div>
   );
