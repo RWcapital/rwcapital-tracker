@@ -16,24 +16,30 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+ async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+  if (!code.trim()) return;
 
-    const trimmed = code.trim();
+  const res = await fetch("/api/resolve-transaction", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      wiseId: code.trim(),
+    }),
+  });
 
-    if (!trimmed) {
-      setError("Ingresa un código de seguimiento");
-      return;
-    }
-
-    if (!isValidTrackingCode(trimmed)) {
-      setError("Formato inválido. Ej: RWC-1767607940321");
-      return;
-    }
-
-    setError("");
-    router.push(`/transaction/${trimmed}`);
+  if (!res.ok) {
+    alert("No encontramos una transferencia con ese código");
+    return;
   }
+
+  const data = await res.json();
+
+  router.push(`/transaction/${data.transactionId}`);
+}
+
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex justify-center px-4 py-10">
