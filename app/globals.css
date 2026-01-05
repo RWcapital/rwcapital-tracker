@@ -70,3 +70,23 @@ body {
 .animate-fade-in-slow {
   animation: fade-in-slow 1.4s ease-out both;
 }
+@keyframes background-pan {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.bg-animated-dark {
+  background: linear-gradient(
+    120deg,
+    #0a0a0a,
+    #111111,
+    #0d0d0d,
+    #000000
+  );
+  background-size: 300% 300%;
+  animation: background-pan 18s ease-in-out infinite;
+}
