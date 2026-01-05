@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 type TimelineEvent = {
@@ -36,13 +37,28 @@ export default async function TransactionPage({
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex justify-center px-4 py-10">
-      <div className="w-full max-w-xl bg-neutral-900 rounded-xl border border-neutral-800 p-8">
+      <div className="w-full max-w-xl bg-neutral-900 rounded-xl border border-neutral-800 p-8 animate-fade-up">
+     <div className="flex justify-center mb-6 animate-fade-in">
+        <Image
+          src="/logo.svg"
+          alt="RW Capital Holding"
+          width={160}
+          height={40}
+          priority
+        />
+      </div>
 
-        <h1 className="text-2xl font-semibold mb-1">
-          {tx.status === "COMPLETED"
-            ? "Transferencia completada"
-            : "Transferencia en proceso"}
-        </h1>
+
+       <h1
+  className={`text-2xl font-semibold mb-1 animate-fade-in ${
+    tx.status !== "COMPLETED" ? "animate-pulse" : ""
+  }`}
+>
+  {tx.status === "COMPLETED"
+    ? "Transferencia completada"
+    : "Transferencia en proceso"}
+</h1>
+
 
         <p className="text-neutral-400 text-sm mb-6">
           {tx.businessName}
@@ -67,7 +83,11 @@ export default async function TransactionPage({
         {tx.timeline.length > 0 && (
           <ol className="relative border-l border-yellow-500 ml-2">
             {tx.timeline.map((e, i) => (
-              <li key={i} className="mb-6 ml-6">
+              <li
+    key={i}
+    className="mb-6 ml-6 animate-fade-in"
+    style={{ animationDelay: `${i * 120}ms` }}
+  >
                 <span className="absolute -left-1.5 w-3 h-3 bg-yellow-500 rounded-full" />
                 <p className="text-xs text-neutral-400">
                   {new Date(e.date).toLocaleString()}
