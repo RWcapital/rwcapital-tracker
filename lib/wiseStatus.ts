@@ -1,10 +1,12 @@
 // lib/wiseStatus.ts
 
 export type WiseStatus =
+  | "transfer.created"
   | "incoming_payment_waiting"
   | "incoming_payment_received"
   | "processing"
   | "funds_sent"
+  | "outgoing_payment_sent"
   | "completed"
   | "cancelled"
   | "failed"
@@ -12,6 +14,13 @@ export type WiseStatus =
 
 export function mapWiseStatus(status: WiseStatus | string) {
   switch (status) {
+    case "transfer.created":
+      return {
+        publicStatus: "CREATED",
+        labelES: "El remitente ha creado tu transferencia",
+        labelEN: "The sender created your transfer",
+      };
+
     case "incoming_payment_waiting":
       return {
         publicStatus: "PENDING",
@@ -22,49 +31,56 @@ export function mapWiseStatus(status: WiseStatus | string) {
     case "incoming_payment_received":
       return {
         publicStatus: "FUNDS_RECEIVED",
-        labelES: "Fondos recibidos",
-        labelEN: "Funds received",
+        labelES: "Hemos recibido los fondos del remitente",
+        labelEN: "Funds received from sender",
       };
 
     case "processing":
       return {
         publicStatus: "PROCESSING",
-        labelES: "Procesando transferencia",
-        labelEN: "Processing transfer",
+        labelES: "Tu dinero está en camino",
+        labelEN: "Your money is on the way",
       };
 
     case "funds_sent":
       return {
         publicStatus: "SENT",
-        labelES: "Fondos enviados al banco",
-        labelEN: "Funds sent to bank",
+        labelES: "El dinero se ha enviado al banco",
+        labelEN: "Funds sent to the bank",
+      };
+
+    case "outgoing_payment_sent":
+      return {
+        publicStatus: "SENT",
+        labelES: "El dinero se mueve a través de la red bancaria",
+        labelEN: "Money is moving through the banking network",
       };
 
     case "completed":
       return {
         publicStatus: "COMPLETED",
-        labelES: "Transferencia completada",
-        labelEN: "Transfer completed",
+        labelES: "Tu dinero debería haber llegado a tu banco",
+        labelEN: "Your money should have arrived at your bank",
       };
 
     case "cancelled":
       return {
         publicStatus: "CANCELLED",
-        labelES: "Transferencia cancelada",
+        labelES: "La transferencia fue cancelada",
         labelEN: "Transfer cancelled",
       };
 
     case "failed":
       return {
         publicStatus: "FAILED",
-        labelES: "Transferencia fallida",
+        labelES: "La transferencia falló",
         labelEN: "Transfer failed",
       };
 
     case "charged_back":
       return {
         publicStatus: "REVERSED",
-        labelES: "Transferencia reversada",
+        labelES: "La transferencia fue revertida",
         labelEN: "Transfer reversed",
       };
 
@@ -76,3 +92,4 @@ export function mapWiseStatus(status: WiseStatus | string) {
       };
   }
 }
+
