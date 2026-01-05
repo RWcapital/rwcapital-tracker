@@ -18,27 +18,23 @@ export async function GET(
     );
   }
 
-  // 🔁 1️⃣ Buscar por publicId
-  let transaction = await prisma.transaction.findUnique({
-    where: { publicId },
+  // ✅ BÚSQUEDA ROBUSTA: publicId OR wiseTransferId OR reference
+  const transaction = await prisma.transaction.findFirst({
+    where: {
+      OR: [
+        { publicId },
+        { wiseTransferId: publicId },
+        { reference: publicId }, // 👈 CLAVE PARA IDs DE WISE
+      ],
+    },
     include: {
-      events: { orderBy: { occurredAt: "asc" } },
+      events: {
+        orderBy: { occurredAt: "asc" },
+      },
       documents: true,
     },
   });
 
-  // 🔁 2️⃣ Si no existe, buscar por wiseTransferId
-  if (!transaction) {
-    transaction = await prisma.transaction.findFirst({
-      where: { wiseTransferId: publicId },
-      include: {
-        events: { orderBy: { occurredAt: "asc" } },
-        documents: true,
-      },
-    });
-  }
-
-  // ❌ Si no existe en ningún lado
   if (!transaction) {
     return NextResponse.json(
       { error: "Transaction not found" },
@@ -46,7 +42,7 @@ export async function GET(
     );
   }
 
-  // ✅ Respuesta normalizada
+  // ✅ RESPUESTA NORMALIZADA
   return NextResponse.json({
     publicId: transaction.publicId,
     businessName: transaction.businessName,
