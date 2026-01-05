@@ -47,9 +47,9 @@ export async function GET(_req: Request, { params }: Params) {
       label: e.label,
     })),
     documents: transaction.documents.map((d) => ({
-      id: d.id,
-      name: d.name,
-      url: d.url,
-    })),
+  id: d.id,
+  type: d.type,
+  fileUrl: d.fileUrl,
+})),
   });
 }
