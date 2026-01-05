@@ -5,7 +5,10 @@ type Params = {
   params: Promise<{ publicId: string }>;
 };
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(
+  _req: Request,
+  { params }: Params
+) {
   const { publicId } = await params;
 
   if (!publicId) {
@@ -19,7 +22,7 @@ export async function GET(_req: Request, { params }: Params) {
     where: { publicId },
     include: {
       events: {
-        orderBy: { occurredAt: 'asc' },
+        orderBy: { occurredAt: 'asc' }, // ✔ campo correcto
       },
       documents: true,
     },
@@ -35,21 +38,23 @@ export async function GET(_req: Request, { params }: Params) {
   return NextResponse.json({
     publicId: transaction.publicId,
     businessName: transaction.businessName,
-    amount: transaction.amount.toString(),
+    amount: transaction.amount.toString(), // ✔ Decimal → string
     currency: transaction.currency,
     status: transaction.status,
     reference: transaction.reference,
     wiseTransferId: transaction.wiseTransferId,
     createdAt: transaction.createdAt.toISOString(),
     updatedAt: transaction.updatedAt.toISOString(),
+
     timeline: transaction.events.map((e) => ({
       date: e.occurredAt.toISOString(),
       label: e.label,
     })),
+
     documents: transaction.documents.map((d) => ({
-  id: d.id,
-  type: d.type,
-  fileUrl: d.fileUrl,
-})),
+      id: d.id,
+      type: d.type,
+      fileUrl: d.fileUrl,
+    })),
   });
 }
