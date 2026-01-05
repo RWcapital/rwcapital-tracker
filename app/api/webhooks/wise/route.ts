@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import crypto from "crypto";
 import { prisma } from "../../../../lib/prisma";
+import { mapWiseStatus } from "../../../../lib/wiseStatus";
 
 export const runtime = "nodejs";
 
+/* ──────────────────────────────
+   FIRMA HMAC
+────────────────────────────── */
 function verifySignature(rawBody: string, signature: string | null) {
   if (!signature) return false;
 
@@ -23,6 +27,9 @@ function generatePublicId() {
   return `RWC-${Date.now()}`;
 }
 
+/* ──────────────────────────────
+   WEBHOOK HANDLER
+────────────────────────────── */
 export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.text();
@@ -38,8 +45,22 @@ export async function POST(request: NextRequest) {
     const payload = JSON.parse(rawBody);
     const { event_type, data } = payload;
 
-    // 🟢 1. CREACIÓN AUTOMÁTICA
+    /* ──────────────────────────────
+       1️⃣ CREACIÓN (IDEMPOTENTE)
+    ────────────────────────────── */
     if (event_type === "transfer.created") {
+      const existing = await prisma.transaction.findUnique({
+        where: { wiseTransferId: data.transfer_id },
+      });
+
+      if (existing) {
+        return NextResponse.json({
+          ok: true,
+          idempotent: true,
+          publicId: existing.publicId,
+        });
+      }
+
       const publicId = generatePublicId();
 
       await prisma.transaction.create({
@@ -49,7 +70,7 @@ export async function POST(request: NextRequest) {
           businessName: "RW Capital Holding, Inc.",
           amount: data.amount.value,
           currency: data.amount.currency,
-          status: "CREATED",
+          status: "PENDING",
           reference: data.reference ?? null,
           events: {
             create: {
@@ -63,7 +84,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, created: true, publicId });
     }
 
-    // 🟡 2. ACTUALIZACIÓN DE ESTADO
+    /* ──────────────────────────────
+       2️⃣ CAMBIO DE ESTADO (MAPEADO)
+    ────────────────────────────── */
     if (event_type === "transfer.status.changed") {
       const tx = await prisma.transaction.findUnique({
         where: { wiseTransferId: data.transfer_id },
@@ -73,25 +96,34 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true, ignored: true });
       }
 
+      const mapped = mapWiseStatus(data.status);
+
       await prisma.transaction.update({
         where: { id: tx.id },
         data: {
-          status: data.status,
+          status: mapped.publicStatus,
           events: {
             create: {
-              label: data.description ?? "Estado actualizado",
+              label: mapped.label,
               occurredAt: new Date(data.occurred_at),
             },
           },
         },
       });
 
-      return NextResponse.json({ ok: true, updated: true });
+      return NextResponse.json({
+        ok: true,
+        updated: true,
+        status: mapped.publicStatus,
+      });
     }
 
+    /* ──────────────────────────────
+       EVENTOS NO SOPORTADOS
+    ────────────────────────────── */
     return NextResponse.json({ ok: true, ignored: true });
   } catch (error: any) {
-    console.error("WEBHOOK ERROR:", error);
+    console.error("WISE WEBHOOK ERROR:", error);
     return NextResponse.json(
       { ok: false, error: error.message },
       { status: 500 }
