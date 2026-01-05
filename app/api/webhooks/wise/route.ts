@@ -7,7 +7,7 @@ import { mapWiseStatus } from "../../../../lib/wiseStatus";
 export const runtime = "nodejs";
 
 /* ──────────────────────────────
-   FIRMA HMAC
+   FIRMA HMAC (SEGURA)
 ────────────────────────────── */
 function verifySignature(rawBody: string, signature: string | null) {
   if (!signature) return false;
@@ -20,11 +20,17 @@ function verifySignature(rawBody: string, signature: string | null) {
     .update(rawBody)
     .digest("hex");
 
-  return expected === signature;
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature)
+  );
 }
 
+/* ──────────────────────────────
+   ID PÚBLICO (ROBUSTO)
+────────────────────────────── */
 function generatePublicId() {
-  return `RWC-${Date.now()}`;
+  return `RWC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 }
 
 /* ──────────────────────────────
@@ -46,7 +52,7 @@ export async function POST(request: NextRequest) {
     const { event_type, data } = payload;
 
     /* ──────────────────────────────
-       1️⃣ CREACIÓN (IDEMPOTENTE)
+       1️⃣ TRANSFER CREATED (IDEMPOTENTE)
     ────────────────────────────── */
     if (event_type === "transfer.created") {
       const existing = await prisma.transaction.findUnique({
@@ -85,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     /* ──────────────────────────────
-       2️⃣ CAMBIO DE ESTADO (MAPEADO)
+       2️⃣ STATUS CHANGED
     ────────────────────────────── */
     if (event_type === "transfer.status.changed") {
       const tx = await prisma.transaction.findUnique({
@@ -99,18 +105,17 @@ export async function POST(request: NextRequest) {
       const mapped = mapWiseStatus(data.status);
 
       await prisma.transaction.update({
-  where: { id: tx.id },
-  data: {
-    status: mapped.publicStatus,
-    events: {
-      create: {
-        label: mapped.labelES,
-        occurredAt: new Date(data.occurred_at),
-      },
-    },
-  },
-});
-
+        where: { id: tx.id },
+        data: {
+          status: mapped.publicStatus,
+          events: {
+            create: {
+              label: mapped.labelES,
+              occurredAt: new Date(data.occurred_at),
+            },
+          },
+        },
+      });
 
       return NextResponse.json({
         ok: true,
