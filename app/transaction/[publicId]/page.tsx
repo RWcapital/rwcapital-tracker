@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { prisma } from "../../../lib/db";
+import { prisma } from "../../../lib/prisma";
 
 
 export const runtime = "nodejs"; // ⬅️ CRÍTICO
