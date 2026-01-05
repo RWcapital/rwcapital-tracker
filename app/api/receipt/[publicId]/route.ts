@@ -1,60 +1,114 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
+import { NextResponse } from "next/server";
+import { prisma } from "../../../lib/prisma";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import fs from "fs";
+import path from "path";
 
-type Params = {
-  params: Promise<{ publicId: string }>;
-};
+export const runtime = "nodejs";
 
 export async function GET(
-  _req: Request,
-  { params }: Params
+  req: Request,
+  { params }: { params: { publicId: string } }
 ) {
-  const { publicId } = await params;
+  const tx = await prisma.transaction.findUnique({
+  where: { publicId: params.publicId },
+  include: {
+    events: {
+      orderBy: { occurredAt: "asc" },
+    },
+  },
+});
 
-  if (!publicId) {
-    return NextResponse.json(
-      { error: 'Missing transaction id' },
-      { status: 400 }
-    );
+
+  if (!tx) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const transaction = await prisma.transaction.findUnique({
-    where: { publicId },
-    include: {
-      events: {
-        orderBy: { occurredAt: 'asc' }, // ✔ campo correcto
-      },
-      documents: true,
-    },
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([595, 842]); // A4
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+
+  // Logo
+  const logoPath = path.join(process.cwd(), "public", "logo.png");
+  const logoBytes = fs.readFileSync(logoPath);
+  const logoImage = await pdf.embedPng(logoBytes);
+  page.drawImage(logoImage, {
+    x: 50,
+    y: 780,
+    width: 120,
+    height: 30,
   });
 
-  if (!transaction) {
-    return NextResponse.json(
-      { error: 'Transaction not found' },
-      { status: 404 }
-    );
-  }
+  // Title
+  page.drawText("Transaction Receipt", {
+    x: 50,
+    y: 730,
+    size: 18,
+    font,
+    color: rgb(0, 0, 0),
+  });
 
-  return NextResponse.json({
-    publicId: transaction.publicId,
-    businessName: transaction.businessName,
-    amount: transaction.amount.toString(), // ✔ Decimal → string
-    currency: transaction.currency,
-    status: transaction.status,
-    reference: transaction.reference,
-    wiseTransferId: transaction.wiseTransferId,
-    createdAt: transaction.createdAt.toISOString(),
-    updatedAt: transaction.updatedAt.toISOString(),
+  const drawRow = (label: string, value: string, y: number) => {
+    page.drawText(label, { x: 50, y, size: 10, font });
+    page.drawText(value, { x: 250, y, size: 10, font });
+  };
 
-    timeline: transaction.events.map((e) => ({
-      date: e.occurredAt.toISOString(),
-      label: e.label,
-    })),
+  drawRow("Transaction ID", tx.publicId, 690);
+  drawRow("Business", tx.businessName, 670);
+  drawRow(
+    "Amount",
+    `${tx.amount.toString()} ${tx.currency}`,
+    650
+  );
+  drawRow("Status", tx.status, 630);
+  drawRow(
+    "Date",
+    new Date(tx.createdAt).toLocaleString(),
+    610
+  );
+  let y = 580;
 
-    documents: transaction.documents.map((d) => ({
-      id: d.id,
-      type: d.type,
-      fileUrl: d.fileUrl,
-    })),
+page.drawText("Timeline", {
+  x: 50,
+  y,
+  size: 12,
+  font,
+});
+
+y -= 20;
+
+tx.events.forEach((event) => {
+  page.drawText(
+    `• ${new Date(event.occurredAt).toLocaleString()} — ${event.label}`,
+    {
+      x: 60,
+      y,
+      size: 9,
+      font,
+    }
+  );
+  y -= 14;
+});
+
+
+  // Footer
+  page.drawText(
+    "RW Capital Holding · This document is automatically generated and valid without signature.",
+    {
+      x: 50,
+      y: 50,
+      size: 8,
+      font,
+      color: rgb(0.5, 0.5, 0.5),
+    }
+  );
+
+  const pdfBytes = await pdf.save();
+
+  return new NextResponse(pdfBytes, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=receipt-${tx.publicId}.pdf`,
+    },
   });
 }
