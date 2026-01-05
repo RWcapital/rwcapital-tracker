@@ -1,86 +1,118 @@
-import { NextResponse } from 'next/server'
-import crypto from 'crypto'
-import { prisma } from '../../../../lib/prisma'
+import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
+import { prisma } from "../../../../lib/prisma";
 
-function verifySignature(body: string, signature: string) {
-  const secret = process.env.WISE_WEBHOOK_SECRET!
+export const runtime = "nodejs";
+
+/**
+ * Genera un publicId seguro y no adivinable
+ */
+function generatePublicId() {
+  const year = new Date().getFullYear();
+  const rand = crypto.randomBytes(3).toString("hex").toUpperCase();
+  return `RWC-${year}-${rand}`;
+}
+
+/**
+ * Verifica firma HMAC de Wise
+ */
+function verifySignature(body: string, signature: string | null) {
+  if (!signature) return false;
+
   const expected = crypto
-    .createHmac('sha256', secret)
+    .createHmac("sha256", process.env.WISE_WEBHOOK_SECRET!)
     .update(body)
-    .digest('hex')
+    .digest("hex");
 
-  return signature === expected
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature)
+  );
 }
 
-const STATUS_MAP: Record<string, string> = {
-  PROCESSING: 'PROCESSING',
-  COMPLETED: 'COMPLETED',
-  FAILED: 'FAILED',
-  CANCELLED: 'CANCELLED',
-}
+export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+  const signature = req.headers.get("x-wise-signature");
 
-export async function POST(req: Request) {
-  const rawBody = await req.text()
-  const signature = req.headers.get('x-wise-signature')
-
-  if (!signature || !verifySignature(rawBody, signature)) {
+  if (!verifySignature(rawBody, signature)) {
     return NextResponse.json(
-      { error: 'Invalid signature' },
+      { error: "Invalid signature" },
       { status: 401 }
-    )
+    );
   }
 
-  const payload = JSON.parse(rawBody)
+  const payload = JSON.parse(rawBody);
+  const eventType = payload.event_type;
+  const data = payload.data;
 
-  const transferId = payload?.data?.transfer_id
-  const wiseStatus = payload?.data?.status
-  const occurredAt = payload?.data?.occurred_at
-  const description = payload?.data?.description
-
-  if (!transferId || !wiseStatus) {
-    return NextResponse.json(
-      { error: 'Invalid payload' },
-      { status: 400 }
-    )
+  const wiseTransferId = data.transfer_id;
+  if (!wiseTransferId) {
+    return NextResponse.json({ ok: true }); // ignorar
   }
 
-  const transaction = await prisma.transaction.findUnique({
-    where: { wiseTransferId: transferId },
-  })
+  // Buscar transacción existente
+  const existingTx = await prisma.transaction.findUnique({
+    where: { wiseTransferId },
+  });
 
-  if (!transaction) {
-    return NextResponse.json(
-      { error: 'Transaction not found' },
-      { status: 404 }
-    )
-  }
+  /**
+   * 🟡 CASO 1 — TRANSFERENCIA CREADA (NO EXISTE EN DB)
+   */
+  if (!existingTx && eventType === "transfer.created") {
+    const publicId = generatePublicId();
 
-  const mappedStatus = STATUS_MAP[wiseStatus]
-
-  if (!mappedStatus) {
-    return NextResponse.json(
-      { error: 'Unhandled Wise status' },
-      { status: 400 }
-    )
-  }
-
-  await prisma.$transaction([
-    prisma.transaction.update({
-      where: { id: transaction.id },
+    await prisma.transaction.create({
       data: {
-        status: mappedStatus,
-        updatedAt: new Date(),
+        publicId,
+        wiseTransferId,
+        businessName: data.recipient?.name ?? "RW Capital Holding, Inc.",
+        amount: data.amount?.value ?? 0,
+        currency: data.amount?.currency ?? "USD",
+        status: "CREATED",
+        reference: data.reference ?? null,
+        events: {
+          create: {
+            label: "Transfer created",
+            occurredAt: new Date(data.occurred_at ?? Date.now()),
+          },
+        },
       },
-    }),
+    });
 
-    prisma.transactionEvent.create({
-      data: {
-        transactionId: transaction.id,
-        label: description ?? `Wise status: ${mappedStatus}`,
-        occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
-      },
-    }),
-  ])
+    return NextResponse.json({ ok: true, created: true });
+  }
 
-  return NextResponse.json({ success: true })
+  /**
+   * 🟢 CASO 2 — TRANSFERENCIA YA EXISTE → ACTUALIZAR ESTADO
+   */
+  if (existingTx) {
+    const statusMap: Record<string, string> = {
+      "transfer.processing": "PROCESSING",
+      "transfer.completed": "COMPLETED",
+      "transfer.cancelled": "CANCELLED",
+      "transfer.failed": "FAILED",
+    };
+
+    const newStatus = statusMap[eventType];
+    const label =
+      data.description ??
+      eventType.replace("transfer.", "").replace("-", " ");
+
+    if (newStatus) {
+      await prisma.transaction.update({
+        where: { id: existingTx.id },
+        data: {
+          status: newStatus,
+          events: {
+            create: {
+              label,
+              occurredAt: new Date(data.occurred_at ?? Date.now()),
+            },
+          },
+        },
+      });
+    }
+  }
+
+  return NextResponse.json({ ok: true });
 }
