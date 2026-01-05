@@ -37,7 +37,7 @@ export default async function TransactionPage({
           <div className="flex justify-between mb-2">
             <span className="text-neutral-400">Monto</span>
             <span>
-              {tx.amount} {tx.currency}
+             {tx.amount.toString()} {tx.currency}
             </span>
           </div>
           <div className="flex justify-between">
