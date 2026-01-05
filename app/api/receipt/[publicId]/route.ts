@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fs from "fs";
@@ -7,23 +7,26 @@ import path from "path";
 export const runtime = "nodejs";
 
 export async function GET(
-  req: Request,
-  { params }: { params: { publicId: string } }
+  request: NextRequest,
+  context: { params: Promise<{ publicId: string }> }
 ) {
-  const tx = await prisma.transaction.findUnique({
-  where: { publicId: params.publicId },
-  include: {
-    events: {
-      orderBy: { occurredAt: "asc" },
-    },
-  },
-});
+  // 🔑 Next.js 15: params es PROMISE
+  const { publicId } = await context.params;
 
+  const tx = await prisma.transaction.findUnique({
+    where: { publicId },
+    include: {
+      events: {
+        orderBy: { occurredAt: "asc" },
+      },
+    },
+  });
 
   if (!tx) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  // --- PDF ---
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([595, 842]); // A4
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -32,6 +35,7 @@ export async function GET(
   const logoPath = path.join(process.cwd(), "public", "logo.png");
   const logoBytes = fs.readFileSync(logoPath);
   const logoImage = await pdf.embedPng(logoBytes);
+
   page.drawImage(logoImage, {
     x: 50,
     y: 780,
@@ -66,30 +70,31 @@ export async function GET(
     new Date(tx.createdAt).toLocaleString(),
     610
   );
+
+  // Timeline
   let y = 580;
 
-page.drawText("Timeline", {
-  x: 50,
-  y,
-  size: 12,
-  font,
-});
+  page.drawText("Timeline", {
+    x: 50,
+    y,
+    size: 12,
+    font,
+  });
 
-y -= 20;
+  y -= 20;
 
-tx.events.forEach((event) => {
-  page.drawText(
-    `• ${new Date(event.occurredAt).toLocaleString()} — ${event.label}`,
-    {
-      x: 60,
-      y,
-      size: 9,
-      font,
-    }
-  );
-  y -= 14;
-});
-
+  tx.events.forEach((event) => {
+    page.drawText(
+      `• ${new Date(event.occurredAt).toLocaleString()} — ${event.label}`,
+      {
+        x: 60,
+        y,
+        size: 9,
+        font,
+      }
+    );
+    y -= 14;
+  });
 
   // Footer
   page.drawText(
@@ -108,7 +113,7 @@ tx.events.forEach((event) => {
   return new NextResponse(pdfBytes, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=receipt-${tx.publicId}.pdf`,
+      "Content-Disposition": `attachment; filename="receipt-${tx.publicId}.pdf"`,
     },
   });
 }
