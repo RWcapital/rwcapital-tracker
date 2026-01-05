@@ -45,7 +45,7 @@ export default function HomePage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
-            placeholder="Ej: RWC-1767607940321"
+            placeholder="Ej: 1607940321"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             className="
