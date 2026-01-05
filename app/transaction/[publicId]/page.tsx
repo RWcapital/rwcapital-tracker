@@ -139,7 +139,13 @@ export default async function TransactionPage({
 
 /* ───────────────── COMPONENTS ───────────────── */
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({
+  status,
+  className = '',
+}: {
+  status: string;
+  className?: string;
+}) {
   const colors: Record<string, string> = {
     PROCESSING: 'bg-yellow-100 text-yellow-800',
     COMPLETED: 'bg-green-100 text-green-800',
@@ -149,15 +155,15 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`px-3 py-1 rounded-full text-sm font-medium
-                  transition-all duration-300 ease-out
-                  animate-in fade-in zoom-in-95
-                  ${colors[status] ?? 'bg-gray-100 text-gray-700'}`}
+      className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${
+        colors[status] ?? 'bg-gray-100 text-gray-700'
+      } ${className}`}
     >
       {STATUS_LABELS[status] ?? status}
     </span>
   );
 }
+
 
 
 function Timeline({ events }: { events: TimelineEvent[] }) {
