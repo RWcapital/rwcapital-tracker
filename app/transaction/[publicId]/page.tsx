@@ -1,6 +1,9 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
+/* ──────────────────────────────
+   TIPOS
+────────────────────────────── */
 type TimelineEvent = {
   date: string;
   label: string;
@@ -17,6 +20,21 @@ type Transaction = {
   timeline: TimelineEvent[];
 };
 
+/* ──────────────────────────────
+   TIMELINE BASE WISE (6 PASOS)
+────────────────────────────── */
+const WISE_TIMELINE = [
+  "El remitente ha creado tu transferencia",
+  "Hemos recibido el dinero",
+  "Tu dinero está en camino",
+  "El dinero se mueve a través de la red bancaria",
+  "Tu dinero debería haber llegado a tu banco",
+  "Transferencia completada",
+];
+
+/* ──────────────────────────────
+   FETCH
+────────────────────────────── */
 async function getTransaction(publicId: string): Promise<Transaction | null> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_URL}/api/transaction/${publicId}`,
@@ -27,6 +45,9 @@ async function getTransaction(publicId: string): Promise<Transaction | null> {
   return res.json();
 }
 
+/* ──────────────────────────────
+   PAGE
+────────────────────────────── */
 export default async function TransactionPage({
   params,
 }: {
@@ -39,9 +60,22 @@ export default async function TransactionPage({
 
   const isCompleted = tx.status?.toUpperCase().trim() === "COMPLETED";
 
+  /* ──────────────────────────────
+     ENRIQUECER TIMELINE (CLAVE)
+  ────────────────────────────── */
+  const enrichedTimeline = WISE_TIMELINE.map((label) => {
+    const realEvent = tx.timeline.find((e) => e.label === label);
+
+    return {
+      label,
+      date: realEvent?.date ?? null,
+      completed: Boolean(realEvent),
+    };
+  });
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex justify-center px-4 py-10">
-      <div className="w-full max-w-xl bg-neutral-900 rounded-xl border border-neutral-800 p-8 animate-fade-up">
+      <div className="w-full max-w-xl bg-neutral-900 rounded-xl border border-neutral-800 p-8">
 
         {/* LOGO */}
         <div className="flex justify-center mb-8">
@@ -54,7 +88,7 @@ export default async function TransactionPage({
           />
         </div>
 
-        {/* HEADER CBPAY STYLE */}
+        {/* HEADER ESTILO WISE / CBPAY */}
         <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2">
           {isCompleted
             ? "Ya está todo listo,"
@@ -80,28 +114,65 @@ export default async function TransactionPage({
           </p>
         )}
 
-        {/* TIMELINE */}
-        {tx.timeline.length > 0 && (
-          <ol className="relative border-l border-yellow-500 ml-2 mb-8">
-            {tx.timeline.map((e, i) => (
-              <li key={i} className="mb-6 ml-6">
+        {/* ──────────────────────────────
+            TIMELINE WISE (6 PASOS)
+        ────────────────────────────── */}
+        <ol className="relative ml-2 mb-8">
+          {enrichedTimeline.map((e, i) => {
+            const isLastCompleted =
+              e.completed &&
+              enrichedTimeline
+                .slice(i + 1)
+                .every(step => !step.completed);
+
+            return (
+              <li key={i} className="relative pl-8 pb-8">
+                {/* Línea */}
+                {i !== enrichedTimeline.length - 1 && (
+                  <span
+                    className={`absolute left-[6px] top-4 h-full w-px ${
+                      e.completed
+                        ? "bg-yellow-500"
+                        : "bg-neutral-700"
+                    }`}
+                  />
+                )}
+
+                {/* Punto */}
                 <span
-                  className={`absolute -left-1.5 w-3 h-3 rounded-full ${
-                    i === tx.timeline.length - 1
-                      ? "bg-yellow-400 ring-4 ring-yellow-400/20"
-                      : "bg-yellow-500"
+                  className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
+                    e.completed
+                      ? "bg-yellow-500 border-yellow-500"
+                      : "bg-neutral-900 border-neutral-600"
+                  } ${
+                    isLastCompleted
+                      ? "ring-4 ring-yellow-500/30"
+                      : ""
                   }`}
                 />
-                <p className="text-xs text-neutral-400">
-                  {new Date(e.date).toLocaleString()}
-                </p>
-                <p className="text-sm font-medium">{e.label}</p>
-              </li>
-            ))}
-          </ol>
-        )}
 
-        {/* TRANSFER DETAILS (CBPAY STYLE) */}
+                {/* Texto */}
+                <p className="text-xs text-neutral-400">
+                  {e.date
+                    ? new Date(e.date).toLocaleString()
+                    : "Pendiente"}
+                </p>
+
+                <p
+                  className={`text-sm ${
+                    e.completed
+                      ? "text-white"
+                      : "text-neutral-500"
+                  }`}
+                >
+                  {e.label}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+
+        {/* TRANSFER DETAILS */}
         <div className="border border-yellow-500/30 rounded-xl p-5 mb-6">
           <h3 className="text-yellow-400 font-semibold mb-4">
             Transfer details
@@ -125,18 +196,22 @@ export default async function TransactionPage({
 
             {tx.reference && (
               <div>
-                <span className="text-neutral-400 block">Reference</span>
+                <span className="text-neutral-400 block">
+                  Reference
+                </span>
                 <span>{tx.reference}</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* DOCUMENTS */}
+        {/* DOCUMENTO */}
         <div className="border border-yellow-500/30 rounded-xl p-5 mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-yellow-400 text-xl">📄</span>
-            <span className="font-medium">Receipt RW Capital</span>
+            <span className="font-medium">
+              Receipt RW Capital
+            </span>
           </div>
 
           <a
