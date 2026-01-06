@@ -2,7 +2,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 
 /* ──────────────────────────────
-   TIPOS
+   TIPOS (SIN CAMBIOS)
 ────────────────────────────── */
 type TimelineEvent = {
   date: string;
@@ -22,7 +22,7 @@ type Transaction = {
 };
 
 /* ──────────────────────────────
-   TIMELINE BASE (MISMO ORDEN)
+   TIMELINE BASE (SIN CAMBIOS)
 ────────────────────────────── */
 const WISE_TIMELINE = [
   "El remitente ha creado tu transferencia",
@@ -62,7 +62,7 @@ export default async function TransactionPage({
   const isCompleted = tx.status?.toUpperCase() === "COMPLETED";
 
   /* ──────────────────────────────
-     ÚLTIMA FECHA REAL (MISMA LÓGICA)
+     ÚLTIMA FECHA REAL (SIN CAMBIOS)
   ────────────────────────────── */
   const lastRealEvent = [...tx.timeline]
     .sort(
@@ -89,7 +89,7 @@ export default async function TransactionPage({
   );
 
   /* ──────────────────────────────
-     TIMELINE ENRIQUECIDO (MISMO)
+     TIMELINE ENRIQUECIDO (SIN CAMBIOS)
   ────────────────────────────── */
   const enrichedTimeline = WISE_TIMELINE.map(
     (label, index) => {
@@ -111,13 +111,13 @@ export default async function TransactionPage({
   );
 
   return (
-    <div className="min-h-screen bg-fintech flex justify-center px-4 py-16">
+    <div className="min-h-screen bg-fintech flex justify-center px-4 py-16 relative overflow-hidden">
 
-      {/* CARD PRINCIPAL */}
-      <div className="w-full max-w-xl card-fintech animate-fade-in">
+      {/* ───── CARD PRINCIPAL ───── */}
+      <div className="relative z-10 w-full max-w-xl card-fintech animate-fade-in">
 
         {/* LOGO */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-8 animate-fade-in-slow">
           <Image
             src="/logo.png"
             alt="RW Capital Holding"
@@ -134,9 +134,9 @@ export default async function TransactionPage({
             : "Estamos procesando tu transferencia"}
         </h1>
 
-        <p className="text-body text-neutral-600 mb-6">
+        <p className="text-body text-[var(--color-text-secondary)] mb-6">
           Destinatario:{" "}
-          <span className="font-medium text-neutral-900">
+          <span className="font-medium text-[var(--color-text-primary)]">
             {tx.recipientName}
           </span>
         </p>
@@ -151,22 +151,31 @@ export default async function TransactionPage({
           </p>
         )}
 
-        {/* ───── TIMELINE ───── */}
-        <ol className="mb-10">
+        {/* ───── TIMELINE (ANIMADO LENTO, STAGGER RESTAURADO) ───── */}
+        <ol className="relative ml-2 mb-10">
           {enrichedTimeline.map((e, i) => (
-            <li key={i} className="timeline-item">
-
+            <li
+              key={i}
+              className="relative pl-8 pb-8 timeline-item animate-fade-up"
+              style={{ animationDelay: `${i * 180}ms` }}
+            >
+              {/* Línea */}
               {i !== enrichedTimeline.length - 1 && (
-                <span className="timeline-line" />
+                <span
+                  className="absolute left-[6px] top-4 h-full w-px bg-[var(--color-border-subtle)]"
+                />
               )}
 
+              {/* Punto */}
               <span
-                className={`timeline-dot ${
-                  e.completed ? "completed" : ""
+                className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
+                  e.completed
+                    ? "bg-[var(--color-brand-primary)] border-[var(--color-brand-primary)]"
+                    : "bg-white border-[var(--color-border-subtle)]"
+                } ${
+                  e.isCurrent ? "timeline-dot current" : ""
                 }`}
               />
-
-              <p className="text-body">{e.label}</p>
 
               <p className="text-small">
                 {e.date
@@ -176,12 +185,16 @@ export default async function TransactionPage({
                     })
                   : "Pendiente"}
               </p>
+
+              <p className="text-body">
+                {e.label}
+              </p>
             </li>
           ))}
         </ol>
 
         {/* ───── TRANSFER DETAILS (MISMA SECCIÓN) ───── */}
-        <div className="border-t border-neutral-200 pt-6 mb-6 space-y-4">
+        <div className="border-t border-[var(--color-border-subtle)] pt-6 mb-6 space-y-4">
 
           <div>
             <p className="text-small">Desde</p>
@@ -209,7 +222,7 @@ export default async function TransactionPage({
         </div>
 
         {/* ───── DOCUMENTO (MISMO FLOW) ───── */}
-        <div className="border border-neutral-200 rounded-lg p-4 flex items-center justify-between mb-6">
+        <div className="border border-[var(--color-border-subtle)] rounded-lg p-4 flex items-center justify-between mb-6">
 
           <span className="text-body">
             Comprobante de transferencia
