@@ -1,65 +1,95 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
+import { mapWiseStatus } from "../../../../lib/wiseStatus";
+
+export const runtime = "nodejs";
 
 type Params = {
   params: Promise<{ publicId: string }>;
 };
 
-export async function GET(
-  _req: Request,
-  { params }: Params
-) {
+export async function GET(_req: Request, { params }: Params) {
   const { publicId } = await params;
 
   if (!publicId) {
-    return NextResponse.json(
-      { error: "Missing transaction id" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
-  // ✅ BÚSQUEDA ROBUSTA: publicId OR wiseTransferId OR reference
-  const transaction = await prisma.transaction.findFirst({
+  // 1️⃣ Buscar en DB
+  let tx = await prisma.transaction.findFirst({
     where: {
       OR: [
         { publicId },
         { wiseTransferId: publicId },
-        { reference: publicId }, // 👈 CLAVE PARA IDs DE WISE
       ],
     },
     include: {
-      events: {
-        orderBy: { occurredAt: "asc" },
-      },
+      events: { orderBy: { occurredAt: "asc" } },
       documents: true,
     },
   });
 
-  if (!transaction) {
-    return NextResponse.json(
-      { error: "Transaction not found" },
-      { status: 404 }
+  // 2️⃣ SI NO EXISTE → CONSULTAR WISE EN TIEMPO REAL
+  if (!tx) {
+    const res = await fetch(
+      `https://api.wise.com/v1/transfers/${publicId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WISE_API_TOKEN}`,
+        },
+      }
     );
+
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: "Transaction not found" },
+        { status: 404 }
+      );
+    }
+
+    const wise = await res.json();
+    const mapped = mapWiseStatus(wise.status);
+
+    // 3️⃣ GUARDAR EN DB
+    tx = await prisma.transaction.create({
+      data: {
+        publicId: wise.id.toString(),          // 👈 USAMOS EL ID WISE
+        wiseTransferId: wise.id.toString(),
+        businessName: "RW Capital Holding, Inc.",
+        amount: wise.sourceValue,
+        currency: wise.sourceCurrency,
+        status: mapped.publicStatus,
+        reference: wise.reference || null,
+        events: {
+          create: {
+            label: mapped.labelES,
+            occurredAt: new Date(wise.created),
+          },
+        },
+      },
+      include: {
+        events: { orderBy: { occurredAt: "asc" } },
+        documents: true,
+      },
+    });
   }
 
-  // ✅ RESPUESTA NORMALIZADA
+  // 4️⃣ RESPUESTA NORMALIZADA
   return NextResponse.json({
-    publicId: transaction.publicId,
-    businessName: transaction.businessName,
-    amount: transaction.amount.toString(),
-    currency: transaction.currency,
-    status: transaction.status,
-    reference: transaction.reference,
-    wiseTransferId: transaction.wiseTransferId,
-    createdAt: transaction.createdAt.toISOString(),
-    updatedAt: transaction.updatedAt.toISOString(),
-
-    timeline: transaction.events.map((e) => ({
+    publicId: tx.publicId,
+    businessName: tx.businessName,
+    amount: tx.amount.toString(),
+    currency: tx.currency,
+    status: tx.status,
+    reference: tx.reference,
+    wiseTransferId: tx.wiseTransferId,
+    createdAt: tx.createdAt.toISOString(),
+    updatedAt: tx.updatedAt.toISOString(),
+    timeline: tx.events.map((e) => ({
       date: e.occurredAt.toISOString(),
       label: e.label,
     })),
-
-    documents: transaction.documents.map((d) => ({
+    documents: tx.documents.map((d) => ({
       id: d.id,
       type: d.type,
       fileUrl: d.fileUrl,
