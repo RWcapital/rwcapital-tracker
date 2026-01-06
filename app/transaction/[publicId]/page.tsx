@@ -11,8 +11,8 @@ type TimelineEvent = {
 
 type Transaction = {
   publicId: string;
-  businessName: string;     // RW Capital Holding, Inc.
-  recipientName: string;    // 👈 CLIENTE (ROSAS DEL CORAZÓN, etc.)
+  businessName: string;   // RW Capital Holding, Inc.
+  recipientName: string;  // 👈 CLIENTE (ROSAS DEL CORAZÓN, etc.)
   amount: string;
   currency: string;
   status: string;
@@ -22,7 +22,7 @@ type Transaction = {
 };
 
 /* ──────────────────────────────
-   TIMELINE BASE WISE (6 PASOS)
+   TIMELINE BASE WISE (ORDEN REAL)
 ────────────────────────────── */
 const WISE_TIMELINE = [
   "El remitente ha creado tu transferencia",
@@ -59,25 +59,28 @@ export default async function TransactionPage({
 
   if (!tx) notFound();
 
-  const isCompleted =
-    tx.status?.toUpperCase().trim() === "COMPLETED";
+  const isCompleted = tx.status?.toUpperCase() === "COMPLETED";
 
   /* ──────────────────────────────
-     ENRIQUECER TIMELINE (CBPAY LOGIC)
+     🔥 LÓGICA CBPAY / WISE REAL
+     Todos los pasos anteriores activos
   ────────────────────────────── */
+  const lastCompletedIndex = WISE_TIMELINE.reduce(
+    (acc, label, index) => {
+      const exists = tx.timeline.some(e => e.label === label);
+      return exists ? index : acc;
+    },
+    -1
+  );
+
   const enrichedTimeline = WISE_TIMELINE.map((label, index) => {
     const realEvent = tx.timeline.find(e => e.label === label);
 
-    const completed = isCompleted ? true : Boolean(realEvent);
-
-    const isLastCompleted =
-      isCompleted && index === WISE_TIMELINE.length - 1;
-
     return {
       label,
-      date: realEvent?.date ?? tx.createdAt ?? null,
-      completed,
-      isLastCompleted,
+      date: realEvent?.date ?? null,
+      completed: index <= lastCompletedIndex,
+      isCurrent: index === lastCompletedIndex,
     };
   });
 
@@ -123,11 +126,12 @@ export default async function TransactionPage({
         )}
 
         {/* ──────────────────────────────
-            TIMELINE (CBPAY STYLE)
+            TIMELINE (CBPAY / WISE)
         ────────────────────────────── */}
         <ol className="relative ml-2 mb-8">
           {enrichedTimeline.map((e, i) => (
             <li key={i} className="relative pl-8 pb-8">
+
               {/* Línea */}
               {i !== enrichedTimeline.length - 1 && (
                 <span
@@ -146,25 +150,26 @@ export default async function TransactionPage({
                     ? "bg-yellow-500 border-yellow-500"
                     : "bg-neutral-900 border-neutral-600"
                 } ${
-                  e.isLastCompleted
+                  e.isCurrent
                     ? "ring-4 ring-yellow-500/30"
                     : ""
                 }`}
               />
 
-              {/* Texto */}
+              {/* Fecha */}
               <p className="text-xs text-neutral-400">
-  {e.date
-    ? new Date(e.date).toLocaleString("es-ES", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "Pendiente"}
+                {e.date
+                  ? new Date(e.date).toLocaleString("es-ES", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Pendiente"}
               </p>
 
+              {/* Label */}
               <p
                 className={`text-sm ${
                   e.completed
@@ -178,7 +183,7 @@ export default async function TransactionPage({
           ))}
         </ol>
 
-        {/* TRANSFER DETAILS (RW COMO FROM) */}
+        {/* TRANSFER DETAILS */}
         <div className="border border-yellow-500/30 rounded-xl p-5 mb-6">
           <h3 className="text-yellow-400 font-semibold mb-4">
             Transfer details
