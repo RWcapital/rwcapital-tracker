@@ -18,7 +18,7 @@ export default function HomePage() {
   }
 
   return (
-   <div className="min-h-screen bg-fintech flex items-center justify-center px-4">
+   <div className="min-h-screen bg-fintech flex items-center justify-center">
 
 
       <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-xl p-8 animate-fade-up">
