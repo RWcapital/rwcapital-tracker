@@ -110,151 +110,165 @@ export default async function TransactionPage({
     }
   );
 
-  return (
-    <div className="min-h-screen bg-fintech flex justify-center px-4 py-10 relative">
-      <div className="w-full max-w-xl bg-neutral-900 rounded-xl border border-neutral-800 p-8">
+return (
+  <div className="min-h-screen bg-fintech flex justify-center px-4 py-10 relative overflow-hidden">
 
-        {/* LOGO */}
-        <div className="flex justify-center mb-8">
-          <Image
-            src="/logo.png"
-            alt="RW Capital Holding"
-            width={220}
-            height={80}
-            priority
-          />
-        </div>
+    {/* ───── Glow ambiental (CLAVE DEL CONTRASTE) ───── */}
+    <div className="absolute inset-0 flex justify-center pointer-events-none">
+      <div className="w-[520px] h-[520px] mt-40 bg-yellow-500/10 blur-[160px] animate-pulse" />
+    </div>
 
-        {/* HEADER */}
-        <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2">
-          {isCompleted
-            ? "Ya está todo listo,"
-            : "Estamos procesando tu transferencia,"}
-          <br />
-          <span className="font-bold uppercase">
-            {tx.recipientName}
-          </span>
-        </h1>
+    {/* ───── Card principal ───── */}
+    <div
+      className="relative z-10 w-full max-w-xl
+                 bg-neutral-900/80 backdrop-blur-xl
+                 rounded-2xl border border-neutral-700/50
+                 shadow-[0_20px_60px_rgba(0,0,0,0.6)]
+                 p-8 animate-fade-in"
+    >
 
-        {tx.createdAt && (
-          <p className="text-sm text-neutral-400 mb-6">
-            {new Date(tx.createdAt).toLocaleString("es-ES")}
-          </p>
-        )}
+      {/* LOGO */}
+      <div className="flex justify-center mb-8">
+        <Image
+          src="/logo.png"
+          alt="RW Capital Holding"
+          width={220}
+          height={80}
+          priority
+        />
+      </div>
 
-        {/* TIMELINE */}
-        <ol className="relative ml-2 mb-8">
-          {enrichedTimeline.map((e, i) => (
-            <li
-  key={i}
-  className="relative pl-8 pb-8 timeline-item"
-  style={{
-    animationDelay: `${i * 180}ms`,
-  }}
->
+      {/* HEADER */}
+      <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2">
+        {isCompleted
+          ? "Ya está todo listo,"
+          : "Estamos procesando tu transferencia,"}
+        <br />
+        <span className="font-bold uppercase">
+          {tx.recipientName}
+        </span>
+      </h1>
 
-              {i !== enrichedTimeline.length - 1 && (
-                <span
-                  className={`absolute left-[6px] top-4 h-full w-px ${
-                    e.completed
-                      ? "bg-yellow-500"
-                      : "bg-neutral-700"
-                  }`}
-                />
-              )}
+      {tx.createdAt && (
+        <p className="text-sm text-neutral-400 mb-6">
+          {new Date(tx.createdAt).toLocaleString("es-ES", {
+            dateStyle: "full",
+            timeStyle: "short",
+          })}
+        </p>
+      )}
 
+      {/* ───── TIMELINE ───── */}
+      <ol className="relative ml-2 mb-8">
+        {enrichedTimeline.map((e, i) => (
+          <li
+            key={i}
+            className="relative pl-8 pb-8 timeline-item"
+            style={{ animationDelay: `${i * 180}ms` }}
+          >
+
+            {/* Línea */}
+            {i !== enrichedTimeline.length - 1 && (
               <span
-                className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
+                className={`absolute left-[6px] top-4 h-full w-px ${
                   e.completed
-                    ? "bg-yellow-500 border-yellow-500"
-                    : "bg-neutral-900 border-neutral-600"
-                } ${
-                  e.isCurrent
-                    ? "ring-4 ring-yellow-500/30"
-                    : ""
+                    ? "bg-yellow-500"
+                    : "bg-neutral-700"
                 }`}
               />
+            )}
 
-              <p className="text-xs text-neutral-400">
-                {e.date
-                  ? new Date(e.date).toLocaleString("es-ES")
-                  : "Pendiente"}
-              </p>
+            {/* Punto */}
+            <span
+              className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
+                e.completed
+                  ? "bg-yellow-500 border-yellow-500"
+                  : "bg-neutral-900 border-neutral-600"
+              } ${
+                e.isCurrent
+                  ? "ring-4 ring-yellow-500/30"
+                  : ""
+              }`}
+            />
 
-              <p
-                className={`text-sm ${
-                  e.completed
-                    ? "text-white"
-                    : "text-neutral-500"
-                }`}
-              >
-                {e.label}
-              </p>
-            </li>
-          ))}
-        </ol>
-        {/* TRANSFER DETAILS */}
-        <div className="border border-yellow-500/30 rounded-xl p-5 mb-6">
-          <h3 className="text-yellow-400 font-semibold mb-4">
-            Transfer details
-          </h3>
+            <p className="text-xs text-neutral-400">
+              {e.date
+                ? new Date(e.date).toLocaleString("es-ES", {
+                    dateStyle: "full",
+                    timeStyle: "short",
+                  })
+                : "Pendiente"}
+            </p>
 
-          <div className="space-y-3 text-sm">
-            {/* FROM */}
-            <div>
-              <span className="text-neutral-400 block">From</span>
-              <span>{tx.businessName}</span>
-            </div>
+            <p
+              className={`text-sm ${
+                e.completed
+                  ? "text-white"
+                  : "text-neutral-500"
+              }`}
+            >
+              {e.label}
+            </p>
+          </li>
+        ))}
+      </ol>
 
-            {/* AMOUNT */}
-            <div>
-              <span className="text-neutral-400 block">Amount</span>
-              <span className="text-lg font-semibold">
-                {Number(tx.amount).toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                {tx.currency}
-              </span>
-            </div>
+      {/* ───── TRANSFER DETAILS ───── */}
+      <div className="border border-yellow-500/30 rounded-xl p-5 mb-6 bg-black/30">
+        <h3 className="text-yellow-400 font-semibold mb-4">
+          Transfer details
+        </h3>
 
-            {/* REFERENCE (SIEMPRE VISIBLE) */}
-            <div>
-              <span className="text-neutral-400 block">Reference</span>
-              <span>
-                {tx.reference && tx.reference.trim() !== ""
-                  ? tx.reference
-                  : "—"}
-              </span>
-            </div>
+        <div className="space-y-3 text-sm">
+          <div>
+            <span className="text-neutral-400 block">From</span>
+            <span>{tx.businessName}</span>
           </div>
-        </div>
 
-
-                {/* DOCUMENTO PDF */}
-        <div className="border border-yellow-500/30 rounded-xl p-5 mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-yellow-400 text-xl">📄</span>
-            <span className="font-medium">
-              Receipt RW Capital
+          <div>
+            <span className="text-neutral-400 block">Amount</span>
+            <span className="text-lg font-semibold">
+              {Number(tx.amount).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+              })}{" "}
+              {tx.currency}
             </span>
           </div>
 
-          <a
-            href={`/api/receipt/${tx.publicId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-yellow-500 hover:bg-yellow-400 text-black font-medium px-4 py-2 rounded-lg transition"
-          >
-            Download
-          </a>
-        </div>
-
-
-        {/* FOOTER */}
-        <div className="mt-6 text-xs text-neutral-500 text-center">
-          RW Capital Holding · Transaction Tracker
+          <div>
+            <span className="text-neutral-400 block">Reference</span>
+            <span>
+              {tx.reference && tx.reference.trim() !== ""
+                ? tx.reference
+                : "—"}
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* ───── DOCUMENTO ───── */}
+      <div className="border border-yellow-500/30 rounded-xl p-5 mb-6 flex items-center justify-between bg-black/30">
+        <div className="flex items-center gap-3">
+          <span className="text-yellow-400 text-xl">📄</span>
+          <span className="font-medium">
+            Receipt RW Capital
+          </span>
+        </div>
+
+        <a
+          href={`/api/receipt/${tx.publicId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-yellow-500 hover:bg-yellow-400 text-black font-medium px-4 py-2 rounded-lg transition"
+        >
+          Download
+        </a>
+      </div>
+
+      {/* FOOTER */}
+      <div className="mt-6 text-xs text-neutral-500 text-center">
+        RW Capital Holding · Transaction Tracker
+      </div>
     </div>
-  );
-}
+  </div>
+);

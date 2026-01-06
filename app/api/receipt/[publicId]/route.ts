@@ -90,7 +90,7 @@ export async function GET(
     {
       x: 50,
       y: 820,
-      size: 9,
+      size: 5,
       font,
       color: rgb(0.4, 0.4, 0.4),
       lineHeight: 12,
