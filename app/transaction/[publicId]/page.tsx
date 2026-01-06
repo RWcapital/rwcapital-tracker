@@ -186,6 +186,25 @@ export default async function TransactionPage({
             </li>
           ))}
         </ol>
+                {/* DOCUMENTO PDF */}
+        <div className="border border-yellow-500/30 rounded-xl p-5 mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-yellow-400 text-xl">📄</span>
+            <span className="font-medium">
+              Receipt RW Capital
+            </span>
+          </div>
+
+          <a
+            href={`/api/receipt/${tx.publicId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-yellow-500 hover:bg-yellow-400 text-black font-medium px-4 py-2 rounded-lg transition"
+          >
+            Download
+          </a>
+        </div>
+
 
         {/* FOOTER */}
         <div className="mt-6 text-xs text-neutral-500 text-center">
