@@ -11,7 +11,8 @@ type TimelineEvent = {
 
 type Transaction = {
   publicId: string;
-  businessName: string;
+  businessName: string;     // RW Capital Holding, Inc.
+  recipientName: string;    // 👈 CLIENTE (ROSAS DEL CORAZÓN, etc.)
   amount: string;
   currency: string;
   status: string;
@@ -58,18 +59,25 @@ export default async function TransactionPage({
 
   if (!tx) notFound();
 
-  const isCompleted = tx.status?.toUpperCase().trim() === "COMPLETED";
+  const isCompleted =
+    tx.status?.toUpperCase().trim() === "COMPLETED";
 
   /* ──────────────────────────────
-     ENRIQUECER TIMELINE (CLAVE)
+     ENRIQUECER TIMELINE (CBPAY LOGIC)
   ────────────────────────────── */
-  const enrichedTimeline = WISE_TIMELINE.map((label) => {
-    const realEvent = tx.timeline.find((e) => e.label === label);
+  const enrichedTimeline = WISE_TIMELINE.map((label, index) => {
+    const realEvent = tx.timeline.find(e => e.label === label);
+
+    const completed = isCompleted ? true : Boolean(realEvent);
+
+    const isLastCompleted =
+      isCompleted && index === WISE_TIMELINE.length - 1;
 
     return {
       label,
-      date: realEvent?.date ?? null,
-      completed: Boolean(realEvent),
+      date: realEvent?.date ?? tx.createdAt ?? null,
+      completed,
+      isLastCompleted,
     };
   });
 
@@ -88,14 +96,14 @@ export default async function TransactionPage({
           />
         </div>
 
-        {/* HEADER ESTILO WISE / CBPAY */}
+        {/* HEADER (CLIENTE, COMO CBPAY) */}
         <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2">
           {isCompleted
             ? "Ya está todo listo,"
             : "Estamos procesando tu transferencia,"}
           <br />
           <span className="font-bold uppercase">
-            {tx.businessName}
+            {tx.recipientName}
           </span>
         </h1>
 
@@ -115,64 +123,56 @@ export default async function TransactionPage({
         )}
 
         {/* ──────────────────────────────
-            TIMELINE WISE (6 PASOS)
+            TIMELINE (CBPAY STYLE)
         ────────────────────────────── */}
         <ol className="relative ml-2 mb-8">
-          {enrichedTimeline.map((e, i) => {
-            const isLastCompleted =
-              e.completed &&
-              enrichedTimeline
-                .slice(i + 1)
-                .every(step => !step.completed);
-
-            return (
-              <li key={i} className="relative pl-8 pb-8">
-                {/* Línea */}
-                {i !== enrichedTimeline.length - 1 && (
-                  <span
-                    className={`absolute left-[6px] top-4 h-full w-px ${
-                      e.completed
-                        ? "bg-yellow-500"
-                        : "bg-neutral-700"
-                    }`}
-                  />
-                )}
-
-                {/* Punto */}
+          {enrichedTimeline.map((e, i) => (
+            <li key={i} className="relative pl-8 pb-8">
+              {/* Línea */}
+              {i !== enrichedTimeline.length - 1 && (
                 <span
-                  className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
+                  className={`absolute left-[6px] top-4 h-full w-px ${
                     e.completed
-                      ? "bg-yellow-500 border-yellow-500"
-                      : "bg-neutral-900 border-neutral-600"
-                  } ${
-                    isLastCompleted
-                      ? "ring-4 ring-yellow-500/30"
-                      : ""
+                      ? "bg-yellow-500"
+                      : "bg-neutral-700"
                   }`}
                 />
+              )}
 
-                {/* Texto */}
-                <p className="text-xs text-neutral-400">
-                  {e.date
-                    ? new Date(e.date).toLocaleString()
-                    : "Pendiente"}
-                </p>
+              {/* Punto */}
+              <span
+                className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
+                  e.completed
+                    ? "bg-yellow-500 border-yellow-500"
+                    : "bg-neutral-900 border-neutral-600"
+                } ${
+                  e.isLastCompleted
+                    ? "ring-4 ring-yellow-500/30"
+                    : ""
+                }`}
+              />
 
-                <p
-                  className={`text-sm ${
-                    e.completed
-                      ? "text-white"
-                      : "text-neutral-500"
-                  }`}
-                >
-                  {e.label}
-                </p>
-              </li>
-            );
-          })}
+              {/* Texto */}
+              <p className="text-xs text-neutral-400">
+                {e.date
+                  ? new Date(e.date).toLocaleString()
+                  : "Pendiente"}
+              </p>
+
+              <p
+                className={`text-sm ${
+                  e.completed
+                    ? "text-white"
+                    : "text-neutral-500"
+                }`}
+              >
+                {e.label}
+              </p>
+            </li>
+          ))}
         </ol>
 
-        {/* TRANSFER DETAILS */}
+        {/* TRANSFER DETAILS (RW COMO FROM) */}
         <div className="border border-yellow-500/30 rounded-xl p-5 mb-6">
           <h3 className="text-yellow-400 font-semibold mb-4">
             Transfer details
@@ -231,4 +231,3 @@ export default async function TransactionPage({
     </div>
   );
 }
-
