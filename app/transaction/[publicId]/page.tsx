@@ -120,12 +120,12 @@ export default async function TransactionPage({
 
     {/* ───── Card principal ───── */}
     <div
-      className="relative z-10 w-full max-w-xl
-                 bg-neutral-900/80 backdrop-blur-xl
-                 rounded-2xl border border-neutral-700/50
-                 shadow-[0_20px_60px_rgba(0,0,0,0.6)]
-                 p-8 animate-fade-in"
-    >
+  className="relative z-10 w-full max-w-xl
+             card-fintech-dark
+             rounded-2xl
+             p-8 animate-fade-in"
+>
+
 
       {/* LOGO */}
       <div className="flex justify-center mb-8">

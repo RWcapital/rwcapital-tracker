@@ -143,3 +143,13 @@ body {
   );
   filter: blur(120px);
 }
+/* ─────────────────────────────────────────────
+   CARD DARK – TRANSACCIÓN (FINTECH)
+───────────────────────────────────────────── */
+.card-fintech-dark {
+  background: rgba(12, 12, 12, 0.88);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
