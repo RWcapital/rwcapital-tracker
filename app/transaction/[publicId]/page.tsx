@@ -11,8 +11,8 @@ type TimelineEvent = {
 
 type Transaction = {
   publicId: string;
-  businessName: string;   // RW Capital Holding, Inc.
-  recipientName: string;  // 👈 CLIENTE (ROSAS DEL CORAZÓN, etc.)
+  businessName: string;
+  recipientName: string;
   amount: string;
   currency: string;
   status: string;
@@ -22,7 +22,7 @@ type Transaction = {
 };
 
 /* ──────────────────────────────
-   TIMELINE BASE WISE (ORDEN REAL)
+   TIMELINE BASE WISE
 ────────────────────────────── */
 const WISE_TIMELINE = [
   "El remitente ha creado tu transferencia",
@@ -62,27 +62,53 @@ export default async function TransactionPage({
   const isCompleted = tx.status?.toUpperCase() === "COMPLETED";
 
   /* ──────────────────────────────
-     🔥 LÓGICA CBPAY / WISE REAL
-     Todos los pasos anteriores activos
+     🔑 ÚLTIMA FECHA REAL (CLAVE)
+  ────────────────────────────── */
+  const lastRealEvent = [...tx.timeline]
+    .sort(
+      (a, b) =>
+        new Date(a.date).getTime() -
+        new Date(b.date).getTime()
+    )
+    .at(-1);
+
+  const fallbackDate =
+    lastRealEvent?.date ?? tx.createdAt ?? null;
+
+  /* ──────────────────────────────
+     ÍNDICE ÚLTIMO PASO COMPLETADO
   ────────────────────────────── */
   const lastCompletedIndex = WISE_TIMELINE.reduce(
     (acc, label, index) => {
-      const exists = tx.timeline.some(e => e.label === label);
+      const exists = tx.timeline.some(
+        e => e.label === label
+      );
       return exists ? index : acc;
     },
     -1
   );
 
-  const enrichedTimeline = WISE_TIMELINE.map((label, index) => {
-    const realEvent = tx.timeline.find(e => e.label === label);
+  /* ──────────────────────────────
+     TIMELINE ESTILO CBPAY
+  ────────────────────────────── */
+  const enrichedTimeline = WISE_TIMELINE.map(
+    (label, index) => {
+      const realEvent = tx.timeline.find(
+        e => e.label === label
+      );
 
-    return {
-      label,
-      date: realEvent?.date ?? null,
-      completed: index <= lastCompletedIndex,
-      isCurrent: index === lastCompletedIndex,
-    };
-  });
+      const completed = index <= lastCompletedIndex;
+
+      return {
+        label,
+        completed,
+        isCurrent: index === lastCompletedIndex,
+        date: completed
+          ? realEvent?.date ?? fallbackDate
+          : null,
+      };
+    }
+  );
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex justify-center px-4 py-10">
@@ -99,7 +125,7 @@ export default async function TransactionPage({
           />
         </div>
 
-        {/* HEADER (CLIENTE, COMO CBPAY) */}
+        {/* HEADER */}
         <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2">
           {isCompleted
             ? "Ya está todo listo,"
@@ -112,27 +138,14 @@ export default async function TransactionPage({
 
         {tx.createdAt && (
           <p className="text-sm text-neutral-400 mb-6">
-            {new Date(tx.createdAt).toLocaleDateString("es-ES", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })},{" "}
-            {new Date(tx.createdAt).toLocaleTimeString("es-ES", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {new Date(tx.createdAt).toLocaleString("es-ES")}
           </p>
         )}
 
-        {/* ──────────────────────────────
-            TIMELINE (CBPAY / WISE)
-        ────────────────────────────── */}
+        {/* TIMELINE */}
         <ol className="relative ml-2 mb-8">
           {enrichedTimeline.map((e, i) => (
             <li key={i} className="relative pl-8 pb-8">
-
-              {/* Línea */}
               {i !== enrichedTimeline.length - 1 && (
                 <span
                   className={`absolute left-[6px] top-4 h-full w-px ${
@@ -143,7 +156,6 @@ export default async function TransactionPage({
                 />
               )}
 
-              {/* Punto */}
               <span
                 className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
                   e.completed
@@ -156,20 +168,12 @@ export default async function TransactionPage({
                 }`}
               />
 
-              {/* Fecha */}
               <p className="text-xs text-neutral-400">
                 {e.date
-                  ? new Date(e.date).toLocaleString("es-ES", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                  ? new Date(e.date).toLocaleString("es-ES")
                   : "Pendiente"}
               </p>
 
-              {/* Label */}
               <p
                 className={`text-sm ${
                   e.completed
@@ -182,57 +186,6 @@ export default async function TransactionPage({
             </li>
           ))}
         </ol>
-
-        {/* TRANSFER DETAILS */}
-        <div className="border border-yellow-500/30 rounded-xl p-5 mb-6">
-          <h3 className="text-yellow-400 font-semibold mb-4">
-            Transfer details
-          </h3>
-
-          <div className="space-y-3 text-sm">
-            <div>
-              <span className="text-neutral-400 block">From</span>
-              <span>{tx.businessName}</span>
-            </div>
-
-            <div>
-              <span className="text-neutral-400 block">Amount</span>
-              <span className="text-lg font-semibold">
-                {Number(tx.amount).toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                {tx.currency}
-              </span>
-            </div>
-
-            {tx.reference && (
-              <div>
-                <span className="text-neutral-400 block">
-                  Reference
-                </span>
-                <span>{tx.reference}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* DOCUMENTO */}
-        <div className="border border-yellow-500/30 rounded-xl p-5 mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-yellow-400 text-xl">📄</span>
-            <span className="font-medium">
-              Receipt RW Capital
-            </span>
-          </div>
-
-          <a
-            href={`/api/receipt/${tx.publicId}`}
-            target="_blank"
-            className="bg-yellow-500 hover:bg-yellow-400 text-black font-medium px-4 py-2 rounded-lg transition"
-          >
-            Download
-          </a>
-        </div>
 
         {/* FOOTER */}
         <div className="mt-6 text-xs text-neutral-500 text-center">
