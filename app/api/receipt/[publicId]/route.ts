@@ -18,6 +18,23 @@ const COL_VALUE = 300;
 const footerText =
   "RW Capital Holding · Automatically generated document · No signature required";
 
+/**
+ * Formato europeo SOLO para visualización
+ * Miles: .
+ * Decimales: ,
+ */
+const formatAmount = (value: number | string) => {
+  const n =
+    typeof value === "string"
+      ? Number(value.replace(",", "."))
+      : value;
+
+  return n.toLocaleString("es-ES", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
 export async function GET(
   _req: NextRequest,
   context: { params: Promise<{ publicId: string }> }
@@ -149,9 +166,9 @@ export async function GET(
   card(p1, 50, 350, 495, 150);
 
   const overview = [
-    ["Amount sent", `${tx.amount.toString()} ${tx.currency}`],
+    ["Amount sent", `${formatAmount(tx.amount)} ${tx.currency}`],
     ["Transfer fees", "—"],
-    ["Total received", `${tx.amount.toString()} ${tx.currency}`],
+    ["Total received", `${formatAmount(tx.amount)} ${tx.currency}`],
   ];
 
   let oy = 470;
@@ -210,7 +227,7 @@ export async function GET(
   row("Business name", tx.businessName);
   row("Reference", tx.reference ?? "-");
   row("Currency", tx.currency);
-  row("Amount", tx.amount.toString());
+  row("Amount", formatAmount(tx.amount));
 
   p2.drawText("Timeline", {
     x: 50,
@@ -238,7 +255,7 @@ export async function GET(
   drawFooter(p2);
 
   /* ──────────────────────────────
-     PAGE 3 — SWIFT MT103
+     PAGE 3 — SWIFT MT103 (SIN CAMBIOS)
   ────────────────────────────── */
   const p3 = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
 
