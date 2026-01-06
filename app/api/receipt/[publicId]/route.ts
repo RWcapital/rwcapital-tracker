@@ -3,6 +3,7 @@ import { prisma } from "../../../../lib/prisma";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fs from "fs";
 import path from "path";
+import { Decimal } from "@prisma/client/runtime/library";
 
 export const runtime = "nodejs";
 
@@ -20,14 +21,17 @@ const footerText =
 
 /**
  * Formato europeo SOLO para visualización
- * Miles: .
- * Decimales: ,
+ * - Miles: .
+ * - Decimales: ,
+ * - Compatible con Prisma.Decimal
  */
-const formatAmount = (value: number | string) => {
+const formatAmount = (value: Decimal | number | string) => {
   const n =
     typeof value === "string"
       ? Number(value.replace(",", "."))
-      : value;
+      : typeof value === "number"
+      ? value
+      : value.toNumber();
 
   return n.toLocaleString("es-ES", {
     minimumFractionDigits: 2,
