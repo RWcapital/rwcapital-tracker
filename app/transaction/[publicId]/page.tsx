@@ -145,7 +145,14 @@ export default async function TransactionPage({
         {/* TIMELINE */}
         <ol className="relative ml-2 mb-8">
           {enrichedTimeline.map((e, i) => (
-            <li key={i} className="relative pl-8 pb-8">
+            <li
+  key={i}
+  className="relative pl-8 pb-8 timeline-item"
+  style={{
+    animationDelay: `${i * 180}ms`,
+  }}
+>
+
               {i !== enrichedTimeline.length - 1 && (
                 <span
                   className={`absolute left-[6px] top-4 h-full w-px ${
