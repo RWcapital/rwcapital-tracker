@@ -148,20 +148,24 @@ export async function GET(
   });
 
   const swift = `
+SWIFT MT103
+
 {1:F01TRWIUS35AXXX}
 {2:I103CITIUS33XXXN}
 {4:
 :20:${tx.publicId}
 :32A:${tx.createdAt
-    .toISOString()
-    .slice(2, 10)
-    .replace(/-/g, "")}${tx.currency}${tx.amount}
-:50K:${tx.businessName}
-:59:${tx.reference ?? "-"}
+  .toISOString()
+  .slice(2, 10)
+  .replace(/-/g, "")}${tx.currency}${tx.amount},
+:50K:${tx.businessName.toUpperCase()}
+:59:/0000000000
+${tx.reference ?? "BENEFICIARY"}
 :70:TRANSFER ${tx.publicId}
 :71A:SHA
 }
 `;
+
 
   p3.drawText(swift.trim(), {
     x: 50,
