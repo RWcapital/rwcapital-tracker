@@ -111,7 +111,7 @@ export default async function TransactionPage({
   );
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white flex justify-center px-4 py-10">
+    <div className="min-h-screen bg-fintech flex justify-center px-4 py-10 relative">
       <div className="w-full max-w-xl bg-neutral-900 rounded-xl border border-neutral-800 p-8">
 
         {/* LOGO */}
