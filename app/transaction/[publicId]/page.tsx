@@ -110,7 +110,7 @@ export default async function TransactionPage({
     }
   );
 
-return (
+  return (
   <div className="min-h-screen bg-fintech flex justify-center px-4 py-10 relative overflow-hidden">
 
     {/* ───── Glow ambiental (CLAVE DEL CONTRASTE) ───── */}
@@ -272,3 +272,4 @@ return (
     </div>
   </div>
 );
+}
