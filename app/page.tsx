@@ -18,7 +18,8 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white flex justify-center px-4 py-10">
+    <div className="min-h-screen bg-animated-dark flex justify-center px-4 py-10 relative overflow-hidden">
+
       <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-xl p-8 animate-fade-up">
 
         {/* LOGO */}
