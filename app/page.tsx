@@ -10,40 +10,34 @@ export default function HomePage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
     const value = code.trim().toUpperCase();
     if (!value) return;
-
     router.push(`/transaction/${value}`);
   }
 
   return (
-   <div className="bg-fintech flex justify-center px-4 py-16">
-
-
-      <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-xl p-8 animate-fade-up">
+    <div className="flex justify-center px-4 py-24">
+      <div className="w-full max-w-md card-fintech animate-fade-up">
 
         {/* LOGO */}
-        <div className="flex justify-center mb-8 animate-fade-in-slow">
+        <div className="flex justify-center mb-8">
           <Image
             src="/logo.png"
             alt="RW Capital Holding"
-            width={220}
-            height={90}
+            width={180}
+            height={70}
             priority
           />
         </div>
 
-        {/* TITLE */}
-        <h1 className="text-xl font-semibold text-center mb-2">
+        <h1 className="text-title-lg text-center mb-2">
           Seguimiento de transferencia
         </h1>
 
-        <p className="text-sm text-neutral-400 text-center mb-6">
-          Ingresa tu código de seguimiento proporcionado por RW Capital
+        <p className="text-body text-center text-neutral-600 mb-6">
+          Ingresa el código de seguimiento proporcionado por RW Capital
         </p>
 
-        {/* FORM */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
@@ -51,26 +45,24 @@ export default function HomePage() {
             value={code}
             onChange={(e) => setCode(e.target.value)}
             className="
-              w-full rounded-lg bg-neutral-950 border border-neutral-800
-              px-4 py-3 text-sm text-white
-              placeholder-neutral-500
-              focus:outline-none focus:ring-2 focus:ring-yellow-500
+              w-full rounded-lg border border-neutral-300
+              px-4 py-3 text-sm
+              focus:outline-none focus:ring-2 focus:ring-[#3B5BDB]
             "
           />
 
           <button
             type="submit"
             className="
-              w-full bg-yellow-500 hover:bg-yellow-400 text-black
-              font-medium py-3 rounded-lg transition
+              w-full bg-[#3B5BDB] hover:bg-[#2F4AC6]
+              text-white font-medium py-3 rounded-lg transition
             "
           >
             Consultar estado
           </button>
         </form>
 
-        {/* FOOTER */}
-        <p className="mt-6 text-xs text-neutral-500 text-center">
+        <p className="mt-6 text-small text-center">
           RW Capital Holding · Secure transfer tracking
         </p>
       </div>
