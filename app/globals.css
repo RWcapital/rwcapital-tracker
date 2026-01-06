@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────
-   VARIABLES BASE (LIGHT · FINTECH)
+   VARIABLES BASE (FINTECH · NO BLANCO)
 ───────────────────────────────────────────── */
 :root {
-  --background: #f7f8fa;
-  --foreground: #0f172a; /* slate-900 */
+  --background: #0b1220;   /* base neutra oscura */
+  --foreground: #e5e7eb;
 }
 
 @theme inline {
@@ -77,9 +77,9 @@ body {
 }
 
 /* ─────────────────────────────────────────────
-   FONDO FINTECH WISE-STYLE (MESH + MOVIMIENTO)
+   FONDO FINTECH (GRADIENT + MOVIMIENTO LEVE)
 ───────────────────────────────────────────── */
-@keyframes mesh-move {
+@keyframes fintech-flow {
   0%   { background-position: 0% 50%; }
   100% { background-position: 100% 50%; }
 }
@@ -88,62 +88,62 @@ body {
   position: relative;
   background:
     radial-gradient(
-      600px 400px at 20% 20%,
-      rgba(34, 197, 94, 0.18),   /* verde suave */
+      800px 500px at 15% 20%,
+      rgba(34, 197, 94, 0.18),   /* verde Wise */
       transparent 60%
     ),
     radial-gradient(
-      500px 400px at 80% 30%,
-      rgba(59, 130, 246, 0.14), /* azul fintech */
+      700px 450px at 85% 25%,
+      rgba(59, 130, 246, 0.18), /* azul fintech */
       transparent 60%
     ),
     radial-gradient(
       600px 500px at 50% 85%,
-      rgba(255, 185, 0, 0.10),  /* amarillo RW */
+      rgba(255, 185, 0, 0.12),  /* amarillo RW */
       transparent 65%
     ),
     linear-gradient(
       180deg,
-      #f7f8fa,
-      #eef2f7,
-      #e9edf3
+      #0b1220,
+      #0f172a,
+      #0b1220
     );
 
   background-size: 200% 200%;
-  animation: mesh-move 40s ease-in-out infinite alternate;
+  animation: fintech-flow 35s ease-in-out infinite alternate;
 }
 
-/* ───────────── Partículas ultra sutiles ───────────── */
+/* ───────────── Partículas suaves (profesional) ───────────── */
 .bg-fintech::after {
   content: "";
   position: fixed;
   inset: 0;
   background-image:
-    radial-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px);
-  background-size: 140px 140px;
-  opacity: 0.25;
+    radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 160px 160px;
+  opacity: 0.15;
   pointer-events: none;
   z-index: 0;
 }
 
 /* ─────────────────────────────────────────────
-   CARD OSCURA – TRANSACCIÓN (TRACKER)
+   CARD OSCURA – TRACKER
 ───────────────────────────────────────────── */
 .card-fintech-dark {
+  position: relative;
   background: linear-gradient(
     180deg,
-    rgba(24, 24, 27, 0.96),
-    rgba(17, 17, 20, 0.96)
+    rgba(24, 24, 27, 0.97),
+    rgba(15, 15, 18, 0.97)
   );
   backdrop-filter: blur(16px);
   border-radius: 1.25rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #ffffff;
-  box-shadow:
-    0 40px 120px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.65);
 }
 
-/* ───────────── Glow amarillo sutil (activo) ───────────── */
+/* ───────────── Glow activo amarillo ───────────── */
 .card-fintech-dark::before {
   content: "";
   position: absolute;
@@ -151,8 +151,8 @@ body {
   border-radius: inherit;
   background:
     radial-gradient(
-      400px 200px at 50% -20%,
-      rgba(255, 185, 0, 0.15),
+      420px 200px at 50% -20%,
+      rgba(255, 185, 0, 0.18),
       transparent 60%
     );
   pointer-events: none;
