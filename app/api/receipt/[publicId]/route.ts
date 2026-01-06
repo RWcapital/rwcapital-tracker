@@ -6,11 +6,12 @@ import path from "path";
 
 export const runtime = "nodejs";
 
+const TIMEZONE = "America/Mexico_City";
+
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ publicId: string }> }
 ) {
-  // 🔑 Next.js 15: params es PROMISE
   const { publicId } = await context.params;
 
   const tx = await prisma.transaction.findUnique({
@@ -23,98 +24,167 @@ export async function GET(
   });
 
   if (!tx) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
   }
 
-  // --- PDF ---
+  /* ──────────────────────────────
+     PDF SETUP
+  ────────────────────────────── */
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([595, 842]); // A4
   const font = await pdf.embedFont(StandardFonts.Helvetica);
 
-  // Logo
+  /* ──────────────────────────────
+     LOGO
+  ────────────────────────────── */
   const logoPath = path.join(process.cwd(), "public", "logo.png");
   const logoBytes = fs.readFileSync(logoPath);
-  const logoImage = await pdf.embedPng(logoBytes);
+  const logo = await pdf.embedPng(logoBytes);
 
-  page.drawImage(logoImage, {
+  /* ──────────────────────────────
+     PAGE 1 — TRANSFER OVERVIEW
+  ────────────────────────────── */
+  const page1 = pdf.addPage([595, 842]);
+
+  page1.drawImage(logo, {
     x: 50,
-    y: 780,
+    y: 790,
     width: 120,
-    height: 30,
+    height: 28,
   });
 
-  // Title
-  page.drawText("Transaction Receipt", {
+  page1.drawText("Transfer confirmation", {
     x: 50,
-    y: 730,
+    y: 750,
     size: 18,
     font,
-    color: rgb(0, 0, 0),
+  });
+
+  const formatDate = (date: Date) =>
+    date.toLocaleString("es-ES", {
+      timeZone: TIMEZONE,
+      dateStyle: "full",
+      timeStyle: "short",
+    });
+
+  page1.drawText(`Transfer ID: ${tx.publicId}`, { x: 50, y: 710, size: 11, font });
+  page1.drawText(`Status: ${tx.status}`, { x: 50, y: 690, size: 11, font });
+  page1.drawText(
+    `Amount sent: ${tx.amount.toString()} ${tx.currency}`,
+    { x: 50, y: 670, size: 11, font }
+  );
+  page1.drawText(
+    `Created: ${formatDate(tx.createdAt)}`,
+    { x: 50, y: 650, size: 10, font }
+  );
+
+  /* ──────────────────────────────
+     PAGE 2 — DETAILS
+  ────────────────────────────── */
+  const page2 = pdf.addPage([595, 842]);
+
+  page2.drawText("Recipient & transfer details", {
+    x: 50,
+    y: 780,
+    size: 16,
+    font,
   });
 
   const drawRow = (label: string, value: string, y: number) => {
-    page.drawText(label, { x: 50, y, size: 10, font });
-    page.drawText(value, { x: 250, y, size: 10, font });
+    page2.drawText(label, { x: 50, y, size: 10, font, color: rgb(0.4, 0.4, 0.4) });
+    page2.drawText(value, { x: 200, y, size: 10, font });
   };
 
-  drawRow("Transaction ID", tx.publicId, 690);
-  drawRow("Business", tx.businessName, 670);
-  drawRow(
-    "Amount",
-    `${tx.amount.toString()} ${tx.currency}`,
-    650
-  );
-  drawRow("Status", tx.status, 630);
-  drawRow(
-    "Date",
-    new Date(tx.createdAt).toLocaleString(),
-    610
-  );
+  drawRow("Sender", tx.businessName, 740);
+  drawRow("Reference", tx.reference ?? "-", 720);
+  drawRow("Currency", tx.currency, 700);
+  drawRow("Amount", tx.amount.toString(), 680);
 
-  // Timeline
-  let y = 580;
+  let yTimeline = 640;
+  page2.drawText("Timeline", { x: 50, y: yTimeline, size: 12, font });
+  yTimeline -= 20;
 
-  page.drawText("Timeline", {
+  tx.events.forEach((e) => {
+    page2.drawText(
+      `• ${formatDate(e.occurredAt)} — ${e.label}`,
+      { x: 60, y: yTimeline, size: 9, font }
+    );
+    yTimeline -= 14;
+  });
+
+  /* ──────────────────────────────
+     PAGE 3 — SWIFT MT103
+  ────────────────────────────── */
+  const page3 = pdf.addPage([595, 842]);
+
+  page3.drawText("SWIFT MT103", {
     x: 50,
-    y,
-    size: 12,
+    y: 780,
+    size: 16,
     font,
   });
 
-  y -= 20;
+  const swiftDate = tx.createdAt
+    .toISOString()
+    .slice(2, 10)
+    .replace(/-/g, "");
 
-  tx.events.forEach((event) => {
-    page.drawText(
-      `• ${new Date(event.occurredAt).toLocaleString()} — ${event.label}`,
-      {
-        x: 60,
-        y,
-        size: 9,
-        font,
-      }
-    );
-    y -= 14;
+  const mt103 = `
+{1:F01TRWIUS35AXXX}
+{2:I103CITIUS33XXXN}
+{4:
+:20:${tx.publicId}
+:32A:${swiftDate}${tx.currency}${tx.amount}
+:50K:${tx.businessName}
+:59:${tx.reference ?? "BENEFICIARY"}
+:70:TRANSFER ${tx.publicId}
+:71A:SHA
+}
+`;
+
+  page3.drawText(mt103.trim(), {
+    x: 50,
+    y: 740,
+    size: 9,
+    font,
+    lineHeight: 12,
   });
 
-  // Footer
-  page.drawText(
-    "RW Capital Holding · This document is automatically generated and valid without signature.",
+  page3.drawText(
+    "This SWIFT message is provided for informational purposes only.",
     {
       x: 50,
-      y: 50,
+      y: 60,
       size: 8,
       font,
       color: rgb(0.5, 0.5, 0.5),
     }
   );
 
-const pdfBytes = await pdf.save();
-const pdfBuffer = Buffer.from(pdfBytes);
+  /* ──────────────────────────────
+     FOOTER (ALL PAGES)
+  ────────────────────────────── */
+  [page1, page2, page3].forEach((page) => {
+    page.drawText(
+      "RW Capital Holding · Automatically generated document · No signature required",
+      {
+        x: 50,
+        y: 40,
+        size: 8,
+        font,
+        color: rgb(0.5, 0.5, 0.5),
+      }
+    );
+  });
 
-return new NextResponse(pdfBuffer, {
-  headers: {
-    "Content-Type": "application/pdf",
-    "Content-Disposition": `attachment; filename="receipt-${tx.publicId}.pdf"`,
-  },
-});
+  /* ──────────────────────────────
+     RESPONSE
+  ────────────────────────────── */
+  const pdfBytes = await pdf.save();
+
+  return new NextResponse(Buffer.from(pdfBytes), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="receipt-${tx.publicId}.pdf"`,
+    },
+  });
 }
