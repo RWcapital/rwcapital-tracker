@@ -186,6 +186,43 @@ export default async function TransactionPage({
             </li>
           ))}
         </ol>
+        {/* TRANSFER DETAILS */}
+        <div className="border border-yellow-500/30 rounded-xl p-5 mb-6">
+          <h3 className="text-yellow-400 font-semibold mb-4">
+            Transfer details
+          </h3>
+
+          <div className="space-y-3 text-sm">
+            {/* FROM */}
+            <div>
+              <span className="text-neutral-400 block">From</span>
+              <span>{tx.businessName}</span>
+            </div>
+
+            {/* AMOUNT */}
+            <div>
+              <span className="text-neutral-400 block">Amount</span>
+              <span className="text-lg font-semibold">
+                {Number(tx.amount).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                })}{" "}
+                {tx.currency}
+              </span>
+            </div>
+
+            {/* REFERENCE (SIEMPRE VISIBLE) */}
+            <div>
+              <span className="text-neutral-400 block">Reference</span>
+              <span>
+                {tx.reference && tx.reference.trim() !== ""
+                  ? tx.reference
+                  : "—"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+
                 {/* DOCUMENTO PDF */}
         <div className="border border-yellow-500/30 rounded-xl p-5 mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
