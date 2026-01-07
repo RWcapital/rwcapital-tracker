@@ -1,5 +1,24 @@
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { publicId: string };
+}): Promise<Metadata> {
+  return {
+    openGraph: {
+      images: [
+        {
+          url: `/transaction/${params.publicId}/opengraph-image`,
+          width: 1200,
+          height: 630,
+        },
+      ],
+    },
+  };
+}
 
 /* ⚠️ IMPORTANTE: evitar cache en producción */
 export const dynamic = "force-dynamic";
