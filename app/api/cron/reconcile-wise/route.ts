@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { mapWiseStatus } from "../../../../lib/wiseStatus";
+import { getRecipientNameFromWise } from "../../../../lib/wiseRecipient";
 
 export const runtime = "nodejs";
 
@@ -25,30 +26,48 @@ export async function GET() {
     let updated = 0;
 
     for (const transfer of transfers) {
-      const wiseId = transfer.id.toString(); // 🔑 ID REAL
+      const wiseId = transfer.id.toString(); // ✅ ID REAL DE WISE
       const mapped = mapWiseStatus(transfer.status);
 
-      const occurredAt = transfer.updated
-        ? new Date(transfer.updated)
+      // ⏱ Fecha correcta
+      const occurredAt = transfer.created
+        ? new Date(transfer.created)
         : new Date();
 
+      // 🔎 Buscar si ya existe
       const existing = await prisma.transaction.findUnique({
         where: { wiseTransferId: wiseId },
       });
+
+      // 🎯 OBTENER NOMBRE REAL DEL DESTINATARIO
+      let recipientName: string | null = null;
+
+      if (transfer.targetAccount) {
+        recipientName = await getRecipientNameFromWise(
+          transfer.targetAccount
+        );
+      }
 
       // 🆕 CREAR SI NO EXISTE
       if (!existing) {
         await prisma.transaction.create({
           data: {
-            publicId: wiseId,        // 👈 USAMOS EL ID DE WISE
+            publicId: wiseId,              // 👈 EL MISMO QUE USA CBPAY
             wiseTransferId: wiseId,
-            businessName:
-              transfer.recipient?.name ??
-              "RW Capital Holding, Inc.",
-            amount: transfer.amount.value,
-            currency: transfer.amount.currency,
+
+            // ✅ QUIÉN ENVÍA
+            businessName: "RW Capital Holding, Inc.",
+
+            // ✅ QUIÉN RECIBE (CLAVE)
+            recipientName: recipientName,
+
+            // ✅ MONTOS CORRECTOS
+            amount: transfer.sourceValue,
+            currency: transfer.sourceCurrency,
+
             status: mapped.publicStatus,
             reference: transfer.reference ?? null,
+
             events: {
               create: {
                 label: mapped.labelES,
@@ -62,7 +81,7 @@ export async function GET() {
         continue;
       }
 
-      // 🔄 ACTUALIZAR SI CAMBIÓ
+      // 🔄 ACTUALIZAR SI CAMBIÓ EL ESTADO
       if (existing.status !== mapped.publicStatus) {
         await prisma.transaction.update({
           where: { id: existing.id },
