@@ -45,15 +45,31 @@ export default async function TransactionPage({
      1️⃣ LEER DESDE PRISMA (PROD SAFE)
   ────────────────────────────── */
   const tx = await prisma.transaction.findFirst({
-    where: {
-      OR: [{ publicId }, { wiseTransferId: publicId }],
-    },
-    include: {
-      events: {
-        orderBy: { occurredAt: "asc" },
+  where: {
+    OR: [{ publicId }, { wiseTransferId: publicId }],
+  },
+  select: {
+    id: true,
+    publicId: true,
+    wiseTransferId: true,
+    businessName: true,
+    recipientName: true, // ✅ FORZADO
+    amount: true,
+    currency: true,
+    status: true,
+    reference: true,
+    createdAt: true,
+    updatedAt: true,
+    events: {
+      orderBy: { occurredAt: "asc" },
+      select: {
+        label: true,
+        occurredAt: true,
       },
     },
-  });
+  },
+});
+
 
   /* ──────────────────────────────
      2️⃣ ESTADO DE ESPERA (NO notFound)
