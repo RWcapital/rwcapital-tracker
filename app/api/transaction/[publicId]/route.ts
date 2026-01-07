@@ -9,43 +9,39 @@ export const runtime = "nodejs";
    TIPOS
 ────────────────────────────── */
 type RouteParams = {
-  params: Promise<{ // En versiones actuales de Next.js, params es una Promesa
+  params: {
     publicId: string;
-  }>;
+  };
 };
 
-// Definimos el objeto de selección como una constante para asegurar que el tipo sea idéntico
-const transactionSelect = {
-  id: true,
-  publicId: true,
-  wiseTransferId: true,
-  businessName: true,
-  recipientName: true,
-  amount: true,
-  currency: true,
-  status: true,
-  reference: true,
-  createdAt: true,
-  updatedAt: true,
-  events: {
-    orderBy: { occurredAt: "asc" as const }, // El 'as const' es clave para TypeScript
-    select: {
-      occurredAt: true,
-      label: true,
-    },
-  },
-  documents: {
-    select: {
-      id: true,
-      type: true,
-      fileUrl: true,
-    },
-  },
-} satisfies Prisma.TransactionSelect;
 
-// El tipo ahora se deriva directamente del objeto de selección
 type TransactionWithRelations = Prisma.TransactionGetPayload<{
-  select: typeof transactionSelect;
+  select: {
+    id: true;
+    publicId: true;
+    wiseTransferId: true;
+    businessName: true;
+    recipientName: true;
+    amount: true;
+    currency: true;
+    status: true;
+    reference: true;
+    createdAt: true;
+    updatedAt: true;
+    events: {
+      select: {
+        occurredAt: true;
+        label: true;
+      };
+    };
+    documents: {
+      select: {
+        id: true;
+        type: true;
+        fileUrl: true;
+      };
+    };
+  };
 }>;
 
 /* ──────────────────────────────
@@ -79,7 +75,7 @@ async function fetchRecipientName(
    ROUTE
 ────────────────────────────── */
 export async function GET(_req: Request, { params }: RouteParams) {
-  const { publicId } = await params; // Se debe esperar a que los params se resuelvan
+  const { publicId } = await params; // Se agrega await aquí
 
   if (!publicId) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
@@ -95,7 +91,33 @@ export async function GET(_req: Request, { params }: RouteParams) {
       where: {
         OR: [{ publicId }, { wiseTransferId: publicId }],
       },
-      select: transactionSelect,
+      select: {
+        id: true,
+        publicId: true,
+        wiseTransferId: true,
+        businessName: true,
+        recipientName: true,
+        amount: true,
+        currency: true,
+        status: true,
+        reference: true,
+        createdAt: true,
+        updatedAt: true,
+        events: {
+          orderBy: { occurredAt: "asc" },
+          select: {
+            occurredAt: true,
+            label: true,
+          },
+        },
+        documents: {
+          select: {
+            id: true,
+            type: true,
+            fileUrl: true,
+          },
+        },
+      },
     });
 
   /* ──────────────────────────────
@@ -119,7 +141,33 @@ export async function GET(_req: Request, { params }: RouteParams) {
           tx = await prisma.transaction.update({
             where: { id: tx.id },
             data: { recipientName: resolvedName },
-            select: transactionSelect,
+            select: {
+              id: true,
+              publicId: true,
+              wiseTransferId: true,
+              businessName: true,
+              recipientName: true,
+              amount: true,
+              currency: true,
+              status: true,
+              reference: true,
+              createdAt: true,
+              updatedAt: true,
+              events: {
+                orderBy: { occurredAt: "asc" },
+                select: {
+                  occurredAt: true,
+                  label: true,
+                },
+              },
+              documents: {
+                select: {
+                  id: true,
+                  type: true,
+                  fileUrl: true,
+                },
+              },
+            },
           });
         }
       }
@@ -171,7 +219,33 @@ export async function GET(_req: Request, { params }: RouteParams) {
           },
         },
       },
-      select: transactionSelect,
+      select: {
+        id: true,
+        publicId: true,
+        wiseTransferId: true,
+        businessName: true,
+        recipientName: true,
+        amount: true,
+        currency: true,
+        status: true,
+        reference: true,
+        createdAt: true,
+        updatedAt: true,
+        events: {
+          orderBy: { occurredAt: "asc" },
+          select: {
+            occurredAt: true,
+            label: true,
+          },
+        },
+        documents: {
+          select: {
+            id: true,
+            type: true,
+            fileUrl: true,
+          },
+        },
+      },
     });
   }
 
