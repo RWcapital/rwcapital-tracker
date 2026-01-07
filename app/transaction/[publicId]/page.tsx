@@ -61,9 +61,7 @@ export default async function TransactionPage({
 
   const isCompleted = tx.status?.toUpperCase() === "COMPLETED";
 
-  /* ──────────────────────────────
-     ÚLTIMA FECHA REAL
-  ────────────────────────────── */
+  /* ───────── Última fecha real ───────── */
   const lastRealEvent = [...tx.timeline]
     .sort(
       (a, b) =>
@@ -75,9 +73,7 @@ export default async function TransactionPage({
   const fallbackDate =
     lastRealEvent?.date ?? tx.createdAt ?? null;
 
-  /* ──────────────────────────────
-     ÍNDICE ÚLTIMO PASO COMPLETADO
-  ────────────────────────────── */
+  /* ───────── Último paso completado ───────── */
   const lastCompletedIndex = WISE_TIMELINE.reduce(
     (acc, label, index) => {
       const exists = tx.timeline.some(
@@ -88,9 +84,7 @@ export default async function TransactionPage({
     -1
   );
 
-  /* ──────────────────────────────
-     TIMELINE ENRIQUECIDO (VIVO)
-  ────────────────────────────── */
+  /* ───────── Timeline vivo (NO TOCAR) ───────── */
   const enrichedTimeline = WISE_TIMELINE.map(
     (label, index) => {
       const realEvent = tx.timeline.find(
@@ -112,13 +106,13 @@ export default async function TransactionPage({
 
   return (
     <div className="min-h-screen bg-fintech-light flex justify-center px-4 py-12 relative overflow-hidden">
-      {/* Fondo animado suave */}
+      {/* Fondo suave */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-indigo-500/10 blur-[180px]" />
         <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-blue-400/10 blur-[160px]" />
       </div>
 
-      {/* Card principal */}
+      {/* Card */}
       <div className="relative z-10 w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] shadow-[0_20px_60px_rgba(15,23,42,0.08)] p-8 animate-fade-in-slow">
         {/* LOGO */}
         <div className="flex justify-center mb-8">
@@ -152,14 +146,13 @@ export default async function TransactionPage({
         )}
 
         {/* TIMELINE */}
-        <ol className="relative ml-2">
+        <ol className="relative ml-2 mb-8">
           {enrichedTimeline.map((e, i) => (
             <li
               key={i}
               className="relative pl-8 pb-8 timeline-item"
               style={{ animationDelay: `${i * 180}ms` }}
             >
-              {/* Línea */}
               {i !== enrichedTimeline.length - 1 && (
                 <span
                   className={`absolute left-[6px] top-4 h-full w-px ${
@@ -170,7 +163,6 @@ export default async function TransactionPage({
                 />
               )}
 
-              {/* Punto */}
               <span
                 className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
                   e.completed
@@ -204,6 +196,58 @@ export default async function TransactionPage({
             </li>
           ))}
         </ol>
+
+        {/* TRANSFER DETAILS (RESTAURADO) */}
+        <div className="border border-[#E6E8EB] rounded-lg p-5 mb-6 bg-[#F7F8FA]">
+          <h3 className="text-[#3B5BDB] font-semibold mb-4">
+            Transfer details
+          </h3>
+
+          <div className="space-y-3 text-[14px]">
+            <div>
+              <span className="block text-[#5F6368]">From</span>
+              <span>{tx.businessName}</span>
+            </div>
+
+            <div>
+              <span className="block text-[#5F6368]">Amount</span>
+              <span className="text-[18px] font-semibold">
+                {Number(tx.amount).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                })}{" "}
+                {tx.currency}
+              </span>
+            </div>
+
+            <div>
+              <span className="block text-[#5F6368]">Reference</span>
+              <span>
+                {tx.reference && tx.reference.trim() !== ""
+                  ? tx.reference
+                  : "—"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* DOWNLOAD PDF (RESTAURADO) */}
+        <div className="border border-[#E6E8EB] rounded-lg p-5 flex items-center justify-between bg-[#F7F8FA]">
+          <div className="flex items-center gap-3">
+            <span className="text-[#3B5BDB] text-lg">📄</span>
+            <span className="font-medium">
+              Transfer receipt (PDF)
+            </span>
+          </div>
+
+          <a
+            href={`/api/receipt/${tx.publicId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-[#3B5BDB] hover:bg-[#2F4AC6] text-white font-medium px-4 py-2 rounded-md transition"
+          >
+            Download
+          </a>
+        </div>
 
         {/* FOOTER */}
         <div className="mt-6 text-[12px] text-[#8A8F98] text-center">
