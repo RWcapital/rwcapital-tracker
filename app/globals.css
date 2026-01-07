@@ -17,7 +17,7 @@
   --color-text-secondary: #5f6368;
   --color-text-muted: #8a8f98;
 
-  /* Brand (Mercury-like blue) */
+  /* Brand */
   --color-brand-primary: #3b5bdb;
   --color-brand-primary-hover: #2f4ac6;
   --color-brand-primary-soft: #eef1ff;
@@ -31,22 +31,37 @@
 
   --color-pending: #6b7280;
   --color-pending-soft: #f3f4f6;
+
+  /* Typography */
+  --font-size-title-xl: 28px;
+  --font-size-title-lg: 22px;
+  --font-size-body: 15px;
+  --font-size-small: 13px;
+
+  --font-weight-bold: 600;
+  --font-weight-medium: 500;
+  --font-weight-regular: 400;
 }
 
 @theme inline {
   --color-background: var(--color-background-primary);
   --color-foreground: var(--color-text-primary);
   --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont;
-  --font-mono: var(--font-geist-mono);
 }
 
 /* ───────────────── BODY ───────────────── */
 body {
-  background: linear-gradient(
-    180deg,
-    #ffffff 0%,
-    #f7f8fa 100%
-  );
+  background:
+    radial-gradient(
+      900px 400px at 50% -10%,
+      rgba(59, 91, 219, 0.06),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      #ffffff,
+      #f7f8fa
+    );
   color: var(--color-text-primary);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont;
 }
@@ -74,64 +89,39 @@ body {
   animation: fade-up 0.5s ease-out both;
 }
 
-/* ─────────────────────────────────────────────
-   FONDO GENERAL (GRADIENT MUY LEVE)
-───────────────────────────────────────────── */
-.bg-fintech {
-  min-height: 100vh;
-  background:
-    radial-gradient(
-      900px 400px at 50% -10%,
-      rgba(59, 91, 219, 0.06),
-      transparent 60%
-    ),
-    linear-gradient(
-      180deg,
-      #ffffff,
-      #f7f8fa
-    );
-}
-
-/* ─────────────────────────────────────────────
-   CARD CENTRAL — TRACKING
-───────────────────────────────────────────── */
+/* ───────────────── CARD ───────────────── */
 .card-fintech {
   background: var(--color-background-card);
   border: 1px solid var(--color-border-subtle);
   border-radius: 12px;
   padding: 32px;
   box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.04),
-    0 8px 24px rgba(0, 0, 0, 0.06);
+    0 1px 2px rgba(0,0,0,0.04),
+    0 8px 24px rgba(0,0,0,0.06);
 }
 
-/* ─────────────────────────────────────────────
-   TYPOGRAPHY SCALE
-───────────────────────────────────────────── */
+/* ───────────────── TYPOGRAPHY ───────────────── */
 .text-title-xl {
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1.25;
+  font-size: var(--font-size-title-xl);
+  font-weight: var(--font-weight-bold);
 }
 
 .text-title-lg {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--font-size-title-lg);
+  font-weight: var(--font-weight-bold);
 }
 
 .text-body {
-  font-size: 15px;
-  font-weight: 400;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
 }
 
 .text-small {
-  font-size: 13px;
+  font-size: var(--font-size-small);
   color: var(--color-text-muted);
 }
 
-/* ─────────────────────────────────────────────
-   TIMELINE — MERCURY STYLE
-───────────────────────────────────────────── */
+/* ───────────────── TIMELINE ───────────────── */
 .timeline-item {
   position: relative;
   padding-left: 32px;
@@ -141,7 +131,7 @@ body {
 .timeline-line {
   position: absolute;
   left: 7px;
-  top: 16px;
+  top: 18px;
   width: 2px;
   height: 100%;
   background: var(--color-border-subtle);
@@ -154,44 +144,16 @@ body {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--color-background-card);
+  background: #ffffff;
   border: 2px solid var(--color-border-subtle);
 }
 
 .timeline-dot.completed {
-  border-color: var(--color-brand-primary);
   background: var(--color-brand-primary);
+  border-color: var(--color-brand-primary);
 }
 
 .timeline-dot.current {
   border-color: var(--color-brand-primary);
-  background: var(--color-background-card);
-}
-
-.timeline-label {
-  font-size: 15px;
-  color: var(--color-text-primary);
-}
-
-.timeline-date {
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-
-/* ─────────────────────────────────────────────
-   STATUS BADGES
-───────────────────────────────────────────── */
-.badge-success {
-  background: var(--color-success-soft);
-  color: var(--color-success);
-}
-
-.badge-warning {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
-}
-
-.badge-pending {
-  background: var(--color-pending-soft);
-  color: var(--color-pending);
+  background: #ffffff;
 }

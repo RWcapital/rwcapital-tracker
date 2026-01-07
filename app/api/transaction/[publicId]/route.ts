@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";
-import { mapWiseStatus } from "../../../../lib/wiseStatus";
+import { prisma } from "../../../../lib/prisma"; // Asegúrate que esta ruta sea correcta en tu proyecto
+import { mapWiseStatus } from "../../../../lib/wiseStatus"; // Igual con esta ruta
 
 export const runtime = "nodejs";
 
@@ -50,16 +50,22 @@ export async function GET(_req: Request, { params }: Params) {
     const wise = await res.json();
     const mapped = mapWiseStatus(wise.status);
 
+    // Intentamos obtener el nombre del destinatario de la respuesta de Wise.
+    // Nota: A veces Wise devuelve solo el ID de la cuenta destino, 
+    // así que usamos un fallback para evitar errores.
+    const recipientNameVal = wise.details?.accountHolderName || wise.targetAccount?.accountHolderName || "Beneficiary";
+
     // 3️⃣ GUARDAR EN DB
     tx = await prisma.transaction.create({
       data: {
-        publicId: wise.id.toString(),          // 👈 USAMOS EL ID WISE
+        publicId: wise.id.toString(),
         wiseTransferId: wise.id.toString(),
         businessName: "RW Capital Holding, Inc.",
         amount: wise.sourceValue,
         currency: wise.sourceCurrency,
         status: mapped.publicStatus,
         reference: wise.reference || null,
+        recipientName: recipientNameVal, // <--- AGREGADO AQUÍ
         events: {
           create: {
             label: mapped.labelES,
@@ -78,6 +84,7 @@ export async function GET(_req: Request, { params }: Params) {
   return NextResponse.json({
     publicId: tx.publicId,
     businessName: tx.businessName,
+    recipientName: tx.recipientName, // <--- ¡CRÍTICO! ESTO FALTABA
     amount: tx.amount.toString(),
     currency: tx.currency,
     status: tx.status,
