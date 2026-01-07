@@ -12,7 +12,7 @@ type TimelineEvent = {
 type Transaction = {
   publicId: string;
   businessName: string;
-  recipientName: string;
+  recipientName: string; // Asegúrate de que esto venga de la DB
   amount: string;
   currency: string;
   status: string;
@@ -59,60 +59,63 @@ export default async function TransactionPage({
 
   if (!tx) notFound();
 
-  const isCompleted = tx.status?.toUpperCase() === "COMPLETED";
+  // Normalizamos el estado para asegurarnos de detectar completado
+  const statusUpper = tx.status?.toUpperCase() || "";
+  const isCompleted = statusUpper === "COMPLETED" || statusUpper === "SUCCESS";
 
   /* ──────────────────────────────
-     🔑 ÚLTIMA FECHA REAL (CLAVE)
+     LOGICA DE FECHAS
   ────────────────────────────── */
+  // Encontramos la fecha más reciente registrada real
   const lastRealEvent = [...tx.timeline]
-    .sort(
-      (a, b) =>
-        new Date(a.date).getTime() -
-        new Date(b.date).getTime()
-    )
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .at(-1);
 
-  const fallbackDate =
-    lastRealEvent?.date ?? tx.createdAt ?? null;
+  // Fecha por defecto si falta alguna intermedia (usamos la última real o la de creación)
+  const fallbackDate = lastRealEvent?.date ?? tx.createdAt ?? new Date().toISOString();
 
   /* ──────────────────────────────
-     ÍNDICE ÚLTIMO PASO COMPLETADO
+     ÍNDICE ÚLTIMO PASO COMPLETADO (FIX)
   ────────────────────────────── */
-  const lastCompletedIndex = WISE_TIMELINE.reduce(
-    (acc, label, index) => {
+  let lastCompletedIndex = -1;
+
+  if (isCompleted) {
+    // FIX: Si el status general es completado, llenamos toda la barra
+    lastCompletedIndex = WISE_TIMELINE.length - 1;
+  } else {
+    // Si no, buscamos hasta qué paso coincide el texto
+    lastCompletedIndex = WISE_TIMELINE.reduce((acc, label, index) => {
+      // Buscamos coincidencia parcial o exacta para ser más flexibles
       const exists = tx.timeline.some(
-        e => e.label === label
+        (e) => e.label.toLowerCase().includes(label.toLowerCase()) || label.toLowerCase().includes(e.label.toLowerCase())
       );
       return exists ? index : acc;
-    },
-    -1
-  );
+    }, -1);
+  }
 
   /* ──────────────────────────────
-     TIMELINE ESTILO CBPAY
+     CONSTRUCCIÓN DEL TIMELINE
   ────────────────────────────── */
-  const enrichedTimeline = WISE_TIMELINE.map(
-    (label, index) => {
-      const realEvent = tx.timeline.find(
-        e => e.label === label
-      );
+  const enrichedTimeline = WISE_TIMELINE.map((label, index) => {
+    const realEvent = tx.timeline.find((e) => e.label === label);
+    const completed = index <= lastCompletedIndex;
 
-      const completed = index <= lastCompletedIndex;
+    // Si está completado pero no tenemos el evento exacto (porque forzamos por status),
+    // usamos la fecha de fallback para que no salga vacío.
+    const displayDate = completed
+      ? realEvent?.date ?? fallbackDate
+      : null;
 
-      return {
-        label,
-        completed,
-        isCurrent: index === lastCompletedIndex,
-        date: completed
-          ? realEvent?.date ?? fallbackDate
-          : null,
-      };
-    }
-  );
+    return {
+      label,
+      completed,
+      isCurrent: index === lastCompletedIndex,
+      date: displayDate,
+    };
+  });
 
   return (
     <div className="min-h-screen bg-fintech-light flex justify-center px-4 py-10 relative overflow-hidden">
-
       {/* Glow sutil Mercury */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-indigo-500/10 blur-[180px]" />
@@ -120,16 +123,8 @@ export default async function TransactionPage({
       </div>
 
       {/* Card principal */}
-      <div
-        className="relative z-10 w-full max-w-xl
-                   bg-white
-                   rounded-xl
-                   border border-[#E6E8EB]
-                   p-8
-                   shadow-[0_20px_60px_rgba(15,23,42,0.08)]
-                   animate-fade-in"
-      >
-
+      <div className="relative z-10 w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)] animate-fade-in">
+        
         {/* LOGO */}
         <div className="flex justify-center mb-8">
           <Image
@@ -143,12 +138,10 @@ export default async function TransactionPage({
 
         {/* HEADER */}
         <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2 text-[#0A0A0A]">
-          {isCompleted
-            ? "Transfer completed"
-            : "Transfer in progress"}
+          {isCompleted ? "Transfer completed" : "Transfer in progress"}
           <br />
           <span className="font-bold uppercase text-[#3B5BDB]">
-            {tx.recipientName}
+            {tx.recipientName || "Recipient"}
           </span>
         </h1>
 
@@ -167,16 +160,13 @@ export default async function TransactionPage({
             <li
               key={i}
               className="relative pl-8 pb-8 timeline-item"
-              style={{ animationDelay: `${i * 180}ms` }}
+              style={{ animationDelay: `${i * 100}ms` }}
             >
-
               {/* Línea */}
               {i !== enrichedTimeline.length - 1 && (
                 <span
                   className={`absolute left-[6px] top-4 h-full w-px ${
-                    e.completed
-                      ? "bg-[#3B5BDB]"
-                      : "bg-[#E6E8EB]"
+                    e.completed ? "bg-[#3B5BDB]" : "bg-[#E6E8EB]"
                   }`}
                 />
               )}
@@ -187,11 +177,7 @@ export default async function TransactionPage({
                   e.completed
                     ? "bg-[#3B5BDB] border-[#3B5BDB]"
                     : "bg-white border-[#CBD5E1]"
-                } ${
-                  e.isCurrent
-                    ? "ring-4 ring-[#3B5BDB]/20"
-                    : ""
-                }`}
+                } ${e.isCurrent ? "ring-4 ring-[#3B5BDB]/20" : ""}`}
               />
 
               <p className="text-xs text-[#8A8F98]">
@@ -205,9 +191,7 @@ export default async function TransactionPage({
 
               <p
                 className={`text-sm ${
-                  e.completed
-                    ? "text-[#0A0A0A]"
-                    : "text-[#6B7280]"
+                  e.completed ? "text-[#0A0A0A]" : "text-[#6B7280]"
                 }`}
               >
                 {e.label}
@@ -223,13 +207,21 @@ export default async function TransactionPage({
           </h3>
 
           <div className="space-y-3 text-sm">
+            {/* FROM */}
             <div>
               <span className="text-[#5F6368] block">From</span>
-              <span className="text-[#0A0A0A]">
-                {tx.businessName}
+              <span className="text-[#0A0A0A] font-medium">{tx.businessName}</span>
+            </div>
+
+            {/* TO (Recipient) - NUEVO */}
+            <div>
+              <span className="text-[#5F6368] block">To</span>
+              <span className="text-[#0A0A0A] font-medium">
+                {tx.recipientName || "—"}
               </span>
             </div>
 
+            {/* AMOUNT */}
             <div>
               <span className="text-[#5F6368] block">Amount</span>
               <span className="text-lg font-semibold text-[#0A0A0A]">
@@ -240,6 +232,7 @@ export default async function TransactionPage({
               </span>
             </div>
 
+            {/* REFERENCE */}
             <div>
               <span className="text-[#5F6368] block">Reference</span>
               <span className="text-[#0A0A0A]">
