@@ -3,17 +3,21 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
+/* ──────────────────────────────
+   PARAMS (Next.js 15 REAL)
+────────────────────────────── */
 type RouteContext = {
-  params: {
+  params: Promise<{
     publicId: string;
-  };
+  }>;
 };
 
 export async function GET(
   _req: NextRequest,
   { params }: RouteContext
 ) {
-  const { publicId } = params;
+  // 🔑 CLAVE: await params
+  const { publicId } = await params;
 
   if (!publicId) {
     return new NextResponse("Missing id", { status: 400 });
@@ -67,7 +71,6 @@ export async function GET(
   <meta name="twitter:image" content="https://track.rwcapitalholding.com/og/amount.png?amount=${encodeURIComponent(
     amount
   )}&currency=${tx.currency}" />
-
 </head>
 <body>
   Redirecting…
