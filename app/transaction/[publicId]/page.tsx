@@ -22,22 +22,21 @@ type Transaction = {
 };
 
 /* ──────────────────────────────
-   TIMELINE BASE (Debe coincidir con lib/wiseStatus.ts)
+   TIMELINE BASE
+   (Sincronizado con wiseStatus.ts para que coincidan los textos)
 ────────────────────────────── */
 const WISE_TIMELINE = [
   "El remitente ha creado tu transferencia",
-  "Hemos recibido el dinero",
+  "Hemos recibido los fondos del remitente", // Corregido según wiseStatus.ts
   "Tu dinero está en camino",
   "El dinero se mueve a través de la red bancaria",
-  "Tu dinero debería haber llegado a tu banco",
-  "Transferencia completada",
+  "Tu dinero debería haber llegado a tu banco", // Esto equivale a 'completed' en wiseStatus.ts
 ];
 
 /* ──────────────────────────────
    FETCH
 ────────────────────────────── */
 async function getTransaction(publicId: string): Promise<Transaction | null> {
-  // Evitamos cache para ver cambios en tiempo real
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_URL}/api/transaction/${publicId}`,
     { cache: "no-store" }
@@ -48,7 +47,7 @@ async function getTransaction(publicId: string): Promise<Transaction | null> {
 }
 
 /* ──────────────────────────────
-   PAGE
+   PAGE COMPONENT
 ────────────────────────────── */
 export default async function TransactionPage({
   params,
@@ -60,52 +59,53 @@ export default async function TransactionPage({
 
   if (!tx) notFound();
 
-  // Normalizamos status para detectar completado
+  // Detectamos si está completada basándonos en el status general o en el último evento
   const statusUpper = tx.status?.toUpperCase() || "";
-  const isCompleted = statusUpper === "COMPLETED" || statusUpper === "SUCCESS";
+  const isCompleted = 
+    statusUpper === "COMPLETED" || 
+    statusUpper === "SUCCESS" ||
+    tx.timeline.some(e => e.label.includes("Tu dinero debería haber llegado"));
 
   /* ──────────────────────────────
      LOGICA DE FECHAS
   ────────────────────────────── */
-  // Ordenamos eventos por fecha real
+  // Ordenar eventos cronológicamente
   const sortedEvents = [...tx.timeline].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
   
+  // Fecha fallback (usamos la última real o la de creación)
   const lastRealEvent = sortedEvents.at(-1);
-
-  // Fallback de fecha: usamos la última real o la de creación
   const fallbackDate = lastRealEvent?.date ?? tx.createdAt ?? new Date().toISOString();
 
   /* ──────────────────────────────
-     ÍNDICE ÚLTIMO PASO COMPLETADO
+     ÍNDICE DE PROGRESO
   ────────────────────────────── */
   let lastCompletedIndex = -1;
 
   if (isCompleted) {
-    // Si la transacción está completada, forzamos llenar toda la barra
+    // Si está completada, llenamos toda la barra visualmente
     lastCompletedIndex = WISE_TIMELINE.length - 1;
   } else {
-    // Buscamos coincidencia flexible
+    // Si no, buscamos cuál es el paso más avanzado que tenemos registrado
     lastCompletedIndex = WISE_TIMELINE.reduce((acc, stepLabel, index) => {
+      // Normalizamos textos para comparar (minúsculas y sin espacios extra)
       const stepClean = stepLabel.toLowerCase().trim();
       
       const exists = tx.timeline.some((e) => {
         const eventClean = e.label.toLowerCase().trim();
-        // Coincidencia parcial: si el evento de la DB contiene el texto del paso o viceversa
         return eventClean.includes(stepClean) || stepClean.includes(eventClean);
       });
 
-      // Si encontramos este paso, actualizamos el índice más alto
-      return exists ? Math.max(acc, index) : acc;
+      return exists ? index : acc;
     }, -1);
   }
 
   /* ──────────────────────────────
-     CONSTRUCCIÓN VISUAL DEL TIMELINE
+     CONSTRUCCIÓN VISUAL
   ────────────────────────────── */
   const enrichedTimeline = WISE_TIMELINE.map((label, index) => {
-    // Intentamos buscar el evento exacto para sacar su fecha real
+    // Buscamos si existe el evento real para mostrar su fecha exacta
     const realEvent = tx.timeline.find(e => 
         e.label.toLowerCase().includes(label.toLowerCase()) || 
         label.toLowerCase().includes(e.label.toLowerCase())
@@ -113,7 +113,8 @@ export default async function TransactionPage({
 
     const completed = index <= lastCompletedIndex;
 
-    // Si está completado, mostramos fecha. Si no hay fecha real, usamos fallback.
+    // Si el paso está completado (por lógica o forzado), mostramos fecha.
+    // Si no tenemos fecha exacta del evento, usamos la fecha más lógica disponible.
     const displayDate = completed
       ? realEvent?.date ?? fallbackDate
       : null;
@@ -128,13 +129,14 @@ export default async function TransactionPage({
 
   return (
     <div className="min-h-screen bg-fintech-light flex justify-center px-4 py-10 relative overflow-hidden">
-      {/* Glow de fondo */}
+      
+      {/* Fondo Animado */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-indigo-500/10 blur-[180px]" />
         <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-blue-400/10 blur-[160px]" />
       </div>
 
-      {/* Card principal */}
+      {/* Tarjeta Principal */}
       <div className="relative z-10 w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)] animate-fade-in">
         
         {/* LOGO */}
@@ -148,7 +150,7 @@ export default async function TransactionPage({
           />
         </div>
 
-        {/* HEADER */}
+        {/* HEADER: Estado y Destinatario */}
         <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2 text-[#0A0A0A]">
           {isCompleted ? "Transferencia completada" : "Transferencia en curso"}
           <br />
@@ -161,16 +163,17 @@ export default async function TransactionPage({
           <p className="text-sm text-[#5F6368] mb-6">
             Iniciada el{" "}
             {new Date(tx.createdAt).toLocaleDateString("es-ES", {
-              day: "numeric",
-              month: "long",
+              weekday: "long",
               year: "numeric",
+              month: "long",
+              day: "numeric",
               hour: "2-digit",
               minute: "2-digit",
             })}
           </p>
         )}
 
-        {/* TIMELINE */}
+        {/* TIMELINE VISUAL */}
         <ol className="relative ml-2 mb-8">
           {enrichedTimeline.map((e, i) => (
             <li
@@ -178,7 +181,7 @@ export default async function TransactionPage({
               className="relative pl-8 pb-8 timeline-item"
               style={{ animationDelay: `${i * 100}ms` }}
             >
-              {/* Línea vertical */}
+              {/* Línea vertical conectora */}
               {i !== enrichedTimeline.length - 1 && (
                 <span
                   className={`absolute left-[6px] top-4 h-full w-px ${
@@ -187,7 +190,7 @@ export default async function TransactionPage({
                 />
               )}
 
-              {/* Punto indicador */}
+              {/* Punto del estado */}
               <span
                 className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
                   e.completed
@@ -203,8 +206,6 @@ export default async function TransactionPage({
                       day: "numeric",
                       month: "long",
                       year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit"
                     })
                   : "Pendiente"}
               </p>
@@ -221,7 +222,7 @@ export default async function TransactionPage({
           ))}
         </ol>
 
-        {/* DETALLES DE TRANSFERENCIA */}
+        {/* DETALLES DE LA TRANSFERENCIA */}
         <div className="border border-[#E6E8EB] rounded-lg p-5 mb-6 bg-[#F7F8FA]">
           <h3 className="text-[#3B5BDB] font-semibold mb-4">
             Detalles de la transferencia
@@ -261,7 +262,7 @@ export default async function TransactionPage({
           </div>
         </div>
 
-        {/* BOTÓN DESCARGA PDF */}
+        {/* BOTÓN DE DESCARGA PDF */}
         <div className="border border-[#E6E8EB] rounded-lg p-5 mb-6 flex items-center justify-between bg-[#F7F8FA]">
           <div className="flex items-center gap-3">
             <span className="text-[#3B5BDB] text-xl">📄</span>
