@@ -15,7 +15,7 @@ type RouteParams = {
 };
 
 /* ──────────────────────────────
-   TIPO CORRECTO PARA INCLUDE
+   TIPO CORRECTO CON INCLUDE (ÚNICO VÁLIDO)
 ────────────────────────────── */
 type TransactionWithRelations = Prisma.TransactionGetPayload<{
   include: {
@@ -187,7 +187,7 @@ export async function GET(
     wiseTransferId: tx.wiseTransferId,
     createdAt: tx.createdAt.toISOString(),
     updatedAt: tx.updatedAt.toISOString(),
-    timeline: tx.events.map((e) => ({
+    timeline: tx.events.map((e: { occurredAt: Date; label: string }) => ({
       date: e.occurredAt.toISOString(),
       label: e.label,
     })),
