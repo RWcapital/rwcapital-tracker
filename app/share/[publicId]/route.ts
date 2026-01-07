@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
-  _: Request,
+  _req: NextRequest,
   { params }: { params: { publicId: string } }
 ) {
   const tx = await prisma.transaction.findFirst({
@@ -28,22 +28,29 @@ export async function GET(
   });
 
   const html = `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="utf-8" />
   <title>${amount} ${tx.currency}</title>
-  <meta name="description" content="Arriving from ${tx.businessName}">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Arriving from ${tx.businessName}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body>
+  <p>${amount} ${tx.currency}</p>
+  <p>Arriving from ${tx.businessName}</p>
+
   <script>
-    window.location.href = "/transaction/${params.publicId}";
+    setTimeout(() => {
+      window.location.href = "/transaction/${params.publicId}";
+    }, 200);
   </script>
 </body>
 </html>`;
 
   return new NextResponse(html, {
     headers: {
-      "Content-Type": "text/html",
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
     },
   });
 }
