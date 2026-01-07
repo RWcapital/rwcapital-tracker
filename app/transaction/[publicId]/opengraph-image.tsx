@@ -1,8 +1,6 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "nodejs";
-export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
 
 export default async function OpenGraphImage({
   params,
@@ -21,18 +19,17 @@ export default async function OpenGraphImage({
           style={{
             width: "100%",
             height: "100%",
+            background: "#f5f6f8",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 48,
-            background: "#F7F8FA",
-            color: "#111",
+            fontSize: 40,
           }}
         >
           Transfer not found
         </div>
       ),
-      size
+      { width: 1200, height: 630 }
     );
   }
 
@@ -48,60 +45,52 @@ export default async function OpenGraphImage({
         style={{
           width: "100%",
           height: "100%",
-          background: "#F7F8FA",
+          background: "#f5f6f8",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontFamily: "Inter, system-ui, sans-serif",
+          fontFamily: "system-ui, -apple-system",
         }}
       >
         <div
           style={{
-            background: "#FFFFFF",
-            borderRadius: 28,
-            padding: "80px 90px",
-            width: 1040,
+            background: "white",
+            borderRadius: 24,
+            padding: "80px",
+            width: 1000,
           }}
         >
-          <div style={{ fontSize: 28, fontWeight: 700 }}>
+          <div style={{ fontSize: 28, fontWeight: 600 }}>
             RW Capital
           </div>
 
           <div
             style={{
-              marginTop: 40,
               fontSize: 96,
               fontWeight: 800,
-              letterSpacing: "-2px",
+              marginTop: 32,
             }}
           >
             {amount}{" "}
-            <span style={{ fontSize: 48 }}>
-              {tx.currency}
-            </span>
+            <span style={{ fontSize: 48 }}>{tx.currency}</span>
           </div>
 
           <div
             style={{
               marginTop: 24,
               fontSize: 28,
-              color: "#6B7280",
+              color: "#555",
             }}
           >
             Transfer sent to
           </div>
 
-          <div
-            style={{
-              fontSize: 36,
-              fontWeight: 600,
-            }}
-          >
+          <div style={{ fontSize: 36, fontWeight: 600 }}>
             {tx.recipientName}
           </div>
         </div>
       </div>
     ),
-    size
+    { width: 1200, height: 630 }
   );
 }
