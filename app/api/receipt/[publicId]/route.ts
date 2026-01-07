@@ -8,23 +8,18 @@ import { Decimal } from "@prisma/client/runtime/library";
 export const runtime = "nodejs";
 
 /* ──────────────────────────────
-   HELPERS
+   CONSTANTES & HELPERS
 ────────────────────────────── */
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
 
+const MARGIN_X = 50;
 const COL_LABEL = 70;
 const COL_VALUE = 300;
 
-const footerText =
-  "RW Capital Holding · Automatically generated document · No signature required";
+const footerBase =
+  "Receipt generated automatically · No signature required";
 
-/**
- * Formato europeo SOLO para visualización
- * - Miles: .
- * - Decimales: ,
- * - Compatible con Prisma.Decimal
- */
 const formatAmount = (value: Decimal | number | string) => {
   const n =
     typeof value === "string"
@@ -33,12 +28,53 @@ const formatAmount = (value: Decimal | number | string) => {
       ? value
       : value.toNumber();
 
-  return n.toLocaleString("es-ES", {
+  return n.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 };
 
+const formatDate = (d: Date) =>
+  d.toLocaleString("en-US", {
+    dateStyle: "long",
+    timeStyle: "short",
+    timeZoneName: "short",
+  });
+
+const drawFooter = (page: any, pageNo: number) => {
+  page.drawText(
+    `RW Capital Holding · ${footerBase} · Page ${pageNo} of 3`,
+    {
+      x: MARGIN_X,
+      y: 40,
+      size: 9,
+      color: rgb(0.45, 0.45, 0.45),
+    }
+  );
+};
+
+const drawRow = (
+  page: any,
+  label: string,
+  value: string,
+  y: number
+) => {
+  page.drawText(label, {
+    x: COL_LABEL,
+    y,
+    size: 11,
+    color: rgb(0.4, 0.4, 0.4),
+  });
+  page.drawText(value, {
+    x: COL_VALUE,
+    y,
+    size: 11,
+  });
+};
+
+/* ──────────────────────────────
+   ROUTE
+────────────────────────────── */
 export async function GET(
   _req: NextRequest,
   context: { params: Promise<{ publicId: string }> }
@@ -66,253 +102,183 @@ export async function GET(
   const logoBytes = fs.readFileSync(logoPath);
   const logo = await pdf.embedPng(logoBytes);
 
-  const formatDate = (d: Date) =>
-    d.toLocaleString("es-ES", {
-      dateStyle: "long",
-      timeStyle: "short",
-    });
-
-  const drawFooter = (page: any) => {
-    page.drawText(footerText, {
-      x: 50,
-      y: 60,
-      size: 9,
-      font,
-      color: rgb(0.5, 0.5, 0.5),
-    });
-  };
-
-  const card = (
-    page: any,
-    x: number,
-    y: number,
-    w: number,
-    h: number
-  ) => {
-    page.drawRectangle({
-      x,
-      y,
-      width: w,
-      height: h,
-      borderColor: rgb(0.85, 0.85, 0.85),
-      borderWidth: 1,
-    });
-  };
-
-  /* ──────────────────────────────
-     PAGE 1 — TRANSFER OVERVIEW
-  ────────────────────────────── */
+  /* ============================================================
+     PAGE 1 — TRANSFER CONFIRMATION (CBPAY STYLE)
+  ============================================================ */
   const p1 = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
 
-  p1.drawImage(logo, { x: 50, y: 780, width: 140, height: 40 });
-
-  p1.drawText(
-    "RW Capital Holding is a financial services company.\nAutomatically generated document.",
-    {
-      x: 50,
-      y: 320,
-      size: 5,
-      font,
-      color: rgb(0.4, 0.4, 0.4),
-      lineHeight: 12,
-    }
-  );
+  p1.drawImage(logo, { x: MARGIN_X, y: 780, width: 140, height: 40 });
 
   p1.drawText("Transfer confirmation", {
-    x: 50,
+    x: MARGIN_X,
     y: 730,
     size: 22,
     font: bold,
   });
 
-  // Transfer status
-  p1.drawText("Transfer status", {
-    x: 50,
-    y: 690,
-    size: 14,
-    font: bold,
-  });
+  let y = 690;
 
-  card(p1, 50, 560, 495, 110);
-
-  const timeline = [
-    ["Transfer ID", tx.publicId],
-    ["Status", tx.status],
-    ["Created", formatDate(tx.createdAt)],
-  ];
-
-  let ty = 640;
-  timeline.forEach(([l, v]) => {
-    p1.drawText(l, {
-      x: COL_LABEL,
-      y: ty,
-      size: 11,
-      font,
-      color: rgb(0.4, 0.4, 0.4),
+  // Timeline (events)
+  tx.events.forEach((e) => {
+    p1.drawText(e.label, {
+      x: MARGIN_X,
+      y,
+      size: 12,
+      font: bold,
     });
-    p1.drawText(v, {
-      x: COL_VALUE,
-      y: ty,
-      size: 11,
-      font,
-    });
-    ty -= 26;
-  });
-
-  // Transfer overview
-  p1.drawText("Transfer overview", {
-    x: 50,
-    y: 520,
-    size: 14,
-    font: bold,
-  });
-
-  card(p1, 50, 350, 495, 150);
-
-  const overview = [
-    ["Amount sent", `${formatAmount(tx.amount)} ${tx.currency}`],
-    ["Transfer fees", "—"],
-    ["Total received", `${formatAmount(tx.amount)} ${tx.currency}`],
-  ];
-
-  let oy = 470;
-  overview.forEach(([l, v]) => {
-    p1.drawText(l, {
-      x: COL_LABEL,
-      y: oy,
-      size: 11,
-      font,
-      color: rgb(0.4, 0.4, 0.4),
-    });
-    p1.drawText(v, {
-      x: COL_VALUE,
-      y: oy,
-      size: 11,
-      font,
-    });
-    oy -= 30;
-  });
-
-  drawFooter(p1);
-
-  /* ──────────────────────────────
-     PAGE 2 — PARTIES & DETAILS
-  ────────────────────────────── */
-  const p2 = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-
-  p2.drawText("Sender details", {
-    x: 50,
-    y: 780,
-    size: 16,
-    font: bold,
-  });
-
-  card(p2, 50, 620, 495, 130);
-
-  let y = 720;
-
-  const row = (l: string, v: string) => {
-    p2.drawText(l, {
-      x: COL_LABEL,
+    y -= 16;
+    p1.drawText(formatDate(new Date(e.occurredAt)), {
+      x: MARGIN_X,
       y,
       size: 11,
-      font,
       color: rgb(0.4, 0.4, 0.4),
-    });
-    p2.drawText(v, {
-      x: COL_VALUE,
-      y,
-      size: 11,
-      font,
     });
     y -= 26;
-  };
+  });
 
-  row("Business name", tx.businessName);
-  row("Reference", tx.reference ?? "-");
-  row("Currency", tx.currency);
-  row("Amount", formatAmount(tx.amount));
+  y -= 10;
 
-  p2.drawText("Timeline", {
-    x: 50,
-    y: 560,
-    size: 16,
+  // Identifiers
+  p1.drawText("Transfer", { x: MARGIN_X, y, size: 14, font: bold });
+  y -= 20;
+  p1.drawText(`#${tx.publicId}`, { x: MARGIN_X, y, size: 12 });
+  y -= 30;
+
+  // Sender
+  p1.drawText("Your details", { x: MARGIN_X, y, size: 14, font: bold });
+  y -= 20;
+  p1.drawText(tx.businessName, { x: MARGIN_X, y, size: 12 });
+  y -= 30;
+
+  // Overview
+  p1.drawText("Transfer overview", {
+    x: MARGIN_X,
+    y,
+    size: 14,
     font: bold,
   });
+  y -= 24;
 
-  card(p2, 50, 350, 495, 180);
+  drawRow(
+    p1,
+    "Amount paid",
+    `${formatAmount(tx.amount)} ${tx.currency}`,
+    y
+  );
+  y -= 22;
 
-  y = 500;
-  tx.events.forEach((e) => {
-    p2.drawText(
-      `• ${formatDate(new Date(e.occurredAt))} — ${e.label}`,
-      {
-        x: 70,
-        y,
-        size: 10,
-        font,
-      }
-    );
-    y -= 18;
-  });
+  drawRow(p1, "Transfer fees", "—", y);
+  y -= 22;
 
-  drawFooter(p2);
+  drawRow(
+    p1,
+    "Transfer amount",
+    `${formatAmount(tx.amount)} ${tx.currency}`,
+    y
+  );
+  y -= 22;
 
-  /* ──────────────────────────────
-     PAGE 3 — SWIFT MT103 (SIN CAMBIOS)
-  ────────────────────────────── */
-  const p3 = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  drawRow(p1, "Exchange rate", "1 USD = 1.0000 USD", y);
+  y -= 22;
 
-  p3.drawText("SWIFT MT103", {
-    x: 50,
+  drawRow(
+    p1,
+    "Total received",
+    `${formatAmount(tx.amount)} ${tx.currency}`,
+    y
+  );
+
+  drawFooter(p1, 1);
+
+  /* ============================================================
+     PAGE 2 — PARTIES & BANKING DETAILS
+  ============================================================ */
+  const p2 = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+
+  p2.drawText("Sent to", {
+    x: MARGIN_X,
     y: 780,
     size: 16,
     font: bold,
   });
 
-  card(p3, 40, 120, 515, 600);
+  y = 750;
+  drawRow(p2, "Name", tx.reference ?? "Beneficiary", y);
+  y -= 24;
+
+  p2.drawText("Account details", {
+    x: MARGIN_X,
+    y,
+    size: 16,
+    font: bold,
+  });
+  y -= 24;
+
+  drawRow(p2, "Bank", "—", y);
+  y -= 22;
+  drawRow(p2, "Account", "—", y);
+  y -= 22;
+  drawRow(p2, "SWIFT/BIC", "—", y);
+  y -= 30;
+
+  p2.drawText("Paid out from", {
+    x: MARGIN_X,
+    y,
+    size: 16,
+    font: bold,
+  });
+  y -= 24;
+
+  drawRow(
+    p2,
+    "Institution",
+    `RW Capital Holding on behalf of ${tx.businessName}`,
+    y
+  );
+
+  drawFooter(p2, 2);
+
+  /* ============================================================
+     PAGE 3 — MT103 SAMPLE
+  ============================================================ */
+  const p3 = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+
+  p3.drawText("MT103 sample", {
+    x: MARGIN_X,
+    y: 780,
+    size: 16,
+    font: bold,
+  });
 
   const swift = `
 {1:F01TRWIUS35AXXX}
 {2:I103CITIUS33XXXN}
 {4:
 :20:${tx.publicId}
+:23B:CRED
 :32A:${tx.createdAt
     .toISOString()
     .slice(2, 10)
     .replace(/-/g, "")}${tx.currency}${tx.amount},
 :50K:${tx.businessName.toUpperCase()}
-:59:/0000000000
-${tx.reference ?? "BENEFICIARY"}
-:70:TRANSFER ${tx.publicId}
-:71A:SHA
+:59:${tx.reference ?? "BENEFICIARY"}
+:71A:OUR
 }
 `;
 
   p3.drawText(swift.trim(), {
-    x: 55,
-    y: 700,
+    x: MARGIN_X,
+    y: 740,
     size: 9,
     font: mono,
     lineHeight: 13,
   });
 
-  p3.drawText(
-    "This SWIFT message is provided for informational purposes only.",
-    {
-      x: 50,
-      y: 100,
-      size: 9,
-      font,
-      color: rgb(0.4, 0.4, 0.4),
-    }
-  );
+  drawFooter(p3, 3);
 
-  drawFooter(p3);
-
-  /* ──────────────────────────────
+  /* ============================================================
      RESPONSE
-  ────────────────────────────── */
+  ============================================================ */
   const bytes = await pdf.save();
 
   return new NextResponse(Buffer.from(bytes), {
