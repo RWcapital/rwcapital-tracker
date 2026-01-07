@@ -77,13 +77,16 @@ export default async function TransactionPage({
      LÓGICA 1: NOMBRE DEL BENEFICIARIO (Solución a "no aparece")
   ───────────────────────────────────────────────────────────── */
   // Prioridad: 1. Nombre Destinatario -> 2. Nombre Negocio -> 3. "Beneficiario"
-  let displayName = "Beneficiario";
-  
-  if (tx.recipientName && tx.recipientName !== "null" && tx.recipientName.trim() !== "") {
-    displayName = tx.recipientName;
-  } else if (tx.businessName && tx.businessName !== "null") {
-    displayName = tx.businessName;
-  }
+let displayName = "Cuenta Wise";
+
+if (
+  tx.recipientName &&
+  tx.recipientName !== "null" &&
+  tx.recipientName.trim() !== "" &&
+  tx.recipientName !== tx.businessName
+) {
+  displayName = tx.recipientName;
+}
 
   /* ─────────────────────────────────────────────────────────────
      LÓGICA 2: ESTADO GLOBAL (Solución a "sale pendiente")
