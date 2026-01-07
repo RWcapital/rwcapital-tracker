@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma"; // Asegúrate que esta ruta sea correcta en tu proyecto
-import { mapWiseStatus } from "../../../../lib/wiseStatus"; // Igual con esta ruta
+import { prisma } from "../../../../lib/prisma"; // Asegúrate de que esta ruta sea correcta
+import { mapWiseStatus } from "../../../../lib/wiseStatus";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,8 @@ export async function GET(_req: Request, { params }: Params) {
   }
 
   // 1️⃣ Buscar en DB
-  let tx = await prisma.transaction.findFirst({
+  // FIX: Agregamos ': any' para evitar el error de TypeScript al reasignar la variable
+  let tx: any = await prisma.transaction.findFirst({
     where: {
       OR: [
         { publicId },
@@ -50,12 +51,11 @@ export async function GET(_req: Request, { params }: Params) {
     const wise = await res.json();
     const mapped = mapWiseStatus(wise.status);
 
-    // Intentamos obtener el nombre del destinatario de la respuesta de Wise.
-    // Nota: A veces Wise devuelve solo el ID de la cuenta destino, 
-    // así que usamos un fallback para evitar errores.
+    // Intentamos obtener el nombre del destinatario
     const recipientNameVal = wise.details?.accountHolderName || wise.targetAccount?.accountHolderName || "Beneficiary";
 
     // 3️⃣ GUARDAR EN DB
+    // Al usar 'any' arriba, TypeScript ya no bloqueará esta asignación
     tx = await prisma.transaction.create({
       data: {
         publicId: wise.id.toString(),
@@ -65,7 +65,7 @@ export async function GET(_req: Request, { params }: Params) {
         currency: wise.sourceCurrency,
         status: mapped.publicStatus,
         reference: wise.reference || null,
-        recipientName: recipientNameVal, // <--- AGREGADO AQUÍ
+        recipientName: recipientNameVal,
         events: {
           create: {
             label: mapped.labelES,
@@ -84,7 +84,7 @@ export async function GET(_req: Request, { params }: Params) {
   return NextResponse.json({
     publicId: tx.publicId,
     businessName: tx.businessName,
-    recipientName: tx.recipientName, // <--- ¡CRÍTICO! ESTO FALTABA
+    recipientName: tx.recipientName, // Dato crítico que faltaba
     amount: tx.amount.toString(),
     currency: tx.currency,
     status: tx.status,
@@ -92,11 +92,11 @@ export async function GET(_req: Request, { params }: Params) {
     wiseTransferId: tx.wiseTransferId,
     createdAt: tx.createdAt.toISOString(),
     updatedAt: tx.updatedAt.toISOString(),
-    timeline: tx.events.map((e) => ({
+    timeline: tx.events.map((e: any) => ({
       date: e.occurredAt.toISOString(),
       label: e.label,
     })),
-    documents: tx.documents.map((d) => ({
+    documents: tx.documents.map((d: any) => ({
       id: d.id,
       type: d.type,
       fileUrl: d.fileUrl,
