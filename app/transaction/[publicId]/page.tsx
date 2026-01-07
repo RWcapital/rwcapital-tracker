@@ -22,7 +22,7 @@ type Transaction = {
 };
 
 /* ──────────────────────────────
-   TIMELINE BASE (WISE / CBPAY)
+   TIMELINE BASE WISE
 ────────────────────────────── */
 const WISE_TIMELINE = [
   "El remitente ha creado tu transferencia",
@@ -36,14 +36,11 @@ const WISE_TIMELINE = [
 /* ──────────────────────────────
    FETCH
 ────────────────────────────── */
-async function getTransaction(
-  publicId: string
-): Promise<Transaction | null> {
- const res = await fetch(
-  `${process.env.NEXT_BASE_URL ?? ""}/api/transaction/${publicId}`,
-  { cache: "no-store" }
-);
-
+async function getTransaction(publicId: string): Promise<Transaction | null> {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/transaction/${publicId}`,
+    { cache: "no-store" }
+  );
 
   if (!res.ok) return null;
   return res.json();
@@ -55,28 +52,31 @@ async function getTransaction(
 export default async function TransactionPage({
   params,
 }: {
-  params: { publicId: string };
+  params: Promise<{ publicId: string }>;
 }) {
-  const tx = await getTransaction(params.publicId);
+  const { publicId } = await params;
+  const tx = await getTransaction(publicId);
+
   if (!tx) notFound();
 
   const isCompleted = tx.status?.toUpperCase() === "COMPLETED";
 
   /* ──────────────────────────────
-     ÚLTIMO EVENTO REAL
+     🔑 ÚLTIMA FECHA REAL (CLAVE)
   ────────────────────────────── */
-  const sortedTimeline = [...tx.timeline].sort(
-    (a, b) =>
-      new Date(a.date).getTime() -
-      new Date(b.date).getTime()
-  );
+  const lastRealEvent = [...tx.timeline]
+    .sort(
+      (a, b) =>
+        new Date(a.date).getTime() -
+        new Date(b.date).getTime()
+    )
+    .at(-1);
 
-  const lastRealEvent = sortedTimeline.at(-1);
   const fallbackDate =
     lastRealEvent?.date ?? tx.createdAt ?? null;
 
   /* ──────────────────────────────
-     ÍNDICE DEL PASO ACTUAL
+     ÍNDICE ÚLTIMO PASO COMPLETADO
   ────────────────────────────── */
   const lastCompletedIndex = WISE_TIMELINE.reduce(
     (acc, label, index) => {
@@ -88,6 +88,9 @@ export default async function TransactionPage({
     -1
   );
 
+  /* ──────────────────────────────
+     TIMELINE ESTILO CBPAY
+  ────────────────────────────── */
   const enrichedTimeline = WISE_TIMELINE.map(
     (label, index) => {
       const realEvent = tx.timeline.find(
@@ -108,156 +111,166 @@ export default async function TransactionPage({
   );
 
   return (
-    <div className="min-h-screen bg-fintech-light flex justify-center px-4 py-12 relative overflow-hidden">
-      {/* Fondo suave estilo Mercury */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-indigo-500/10 blur-[180px]" />
-        <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-blue-400/10 blur-[160px]" />
+  <div className="min-h-screen bg-fintech flex justify-center px-4 py-10 relative overflow-hidden">
+
+    {/* ───── Glow ambiental (CLAVE DEL CONTRASTE) ───── */}
+    <div className="absolute inset-0 flex justify-center pointer-events-none">
+      <div className="w-[520px] h-[520px] mt-40 bg-yellow-500/10 blur-[160px] animate-pulse" />
+    </div>
+
+    {/* ───── Card principal ───── */}
+    <div
+  className="relative z-10 w-full max-w-xl
+             card-fintech-dark
+             rounded-2xl
+             p-8 animate-fade-in"
+>
+
+
+      {/* LOGO */}
+      <div className="flex justify-center mb-8">
+        <Image
+          src="/logo.png"
+          alt="RW Capital Holding"
+          width={220}
+          height={80}
+          priority
+        />
       </div>
 
-      <div className="relative w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-        {/* LOGO */}
-        <div className="flex justify-center mb-8">
-          <Image
-            src="/logo.png"
-            alt="RW Capital Holding"
-            width={200}
-            height={60}
-            priority
-          />
-        </div>
+      {/* HEADER */}
+      <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2">
+        {isCompleted
+          ? "Ya está todo listo,"
+          : "Estamos procesando tu transferencia,"}
+        <br />
+        <span className="font-bold uppercase">
+          {tx.recipientName}
+        </span>
+      </h1>
 
-        {/* HEADER */}
-        <h1 className="text-[22px] font-semibold leading-tight mb-3 text-[#0A0A0A]">
-          {isCompleted
-            ? "Transfer completed"
-            : "Transfer in progress"}
-        </h1>
+      {tx.createdAt && (
+        <p className="text-sm text-neutral-400 mb-6">
+          {new Date(tx.createdAt).toLocaleString("es-ES", {
+            dateStyle: "full",
+            timeStyle: "short",
+          })}
+        </p>
+      )}
 
-        {/* FROM / TO */}
-        <div className="mb-6 space-y-1 text-[14px]">
-          <div className="text-[#5F6368]">
-            From:{" "}
-            <span className="text-[#0A0A0A] font-medium">
-              {tx.businessName}
-            </span>
-          </div>
+      {/* ───── TIMELINE ───── */}
+      <ol className="relative ml-2 mb-8">
+        {enrichedTimeline.map((e, i) => (
+          <li
+            key={i}
+            className="relative pl-8 pb-8 timeline-item"
+            style={{ animationDelay: `${i * 180}ms` }}
+          >
 
-          <div className="text-[#5F6368]">
-            To:{" "}
-            <span className="text-[#0A0A0A] font-semibold uppercase">
-              {tx.recipientName || "—"}
-            </span>
-          </div>
-        </div>
-
-        {/* FECHA */}
-        {tx.createdAt && (
-          <p className="text-[13px] text-[#8A8F98] mb-6">
-            {new Date(tx.createdAt).toLocaleString("en-US", {
-              dateStyle: "long",
-              timeStyle: "short",
-            })}
-          </p>
-        )}
-
-        {/* TIMELINE (MISMA LÓGICA) */}
-        <ol className="relative ml-2 mb-10">
-          {enrichedTimeline.map((e, i) => (
-            <li
-              key={i}
-              className="relative pl-8 pb-8 timeline-item"
-              style={{ animationDelay: `${i * 160}ms` }}
-            >
-              {i !== enrichedTimeline.length - 1 && (
-                <span
-                  className={`absolute left-[6px] top-4 h-full w-px ${
-                    e.completed
-                      ? "bg-[#3B5BDB]"
-                      : "bg-[#E6E8EB]"
-                  }`}
-                />
-              )}
-
+            {/* Línea */}
+            {i !== enrichedTimeline.length - 1 && (
               <span
-                className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
+                className={`absolute left-[6px] top-4 h-full w-px ${
                   e.completed
-                    ? "bg-[#3B5BDB] border-[#3B5BDB]"
-                    : "bg-white border-[#CBD5E1]"
-                } ${
-                  e.isCurrent
-                    ? "ring-4 ring-[#3B5BDB]/20"
-                    : ""
+                    ? "bg-yellow-500"
+                    : "bg-neutral-700"
                 }`}
               />
+            )}
 
-              <p className="text-[12px] text-[#8A8F98]">
-                {e.date
-                  ? new Date(e.date).toLocaleString("en-US", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })
-                  : "Pending"}
-              </p>
+            {/* Punto */}
+            <span
+              className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
+                e.completed
+                  ? "bg-yellow-500 border-yellow-500"
+                  : "bg-neutral-900 border-neutral-600"
+              } ${
+                e.isCurrent
+                  ? "ring-4 ring-yellow-500/30"
+                  : ""
+              }`}
+            />
 
-              <p
-                className={`text-[14px] ${
-                  e.completed
-                    ? "text-[#0A0A0A]"
-                    : "text-[#6B7280]"
-                }`}
-              >
-                {e.label}
-              </p>
-            </li>
-          ))}
-        </ol>
+            <p className="text-xs text-neutral-400">
+              {e.date
+                ? new Date(e.date).toLocaleString("es-ES", {
+                    dateStyle: "full",
+                    timeStyle: "short",
+                  })
+                : "Pendiente"}
+            </p>
 
-        {/* DETAILS (MISMO CONTENIDO) */}
-        <div className="border border-[#E6E8EB] rounded-lg p-5 mb-6 bg-[#F7F8FA]">
-          <h3 className="text-[#3B5BDB] font-semibold mb-4">
-            Transfer details
-          </h3>
+            <p
+              className={`text-sm ${
+                e.completed
+                  ? "text-white"
+                  : "text-neutral-500"
+              }`}
+            >
+              {e.label}
+            </p>
+          </li>
+        ))}
+      </ol>
 
-          <div className="space-y-3 text-[14px]">
-            <div>
-              <span className="text-[#5F6368] block">Amount</span>
-              <span className="text-[18px] font-semibold text-[#0A0A0A]">
-                {Number(tx.amount).toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                {tx.currency}
-              </span>
-            </div>
+      {/* ───── TRANSFER DETAILS ───── */}
+      <div className="border border-yellow-500/30 rounded-xl p-5 mb-6 bg-black/30">
+        <h3 className="text-yellow-400 font-semibold mb-4">
+          Transfer details
+        </h3>
 
-            <div>
-              <span className="text-[#5F6368] block">
-                Reference
-              </span>
-              <span className="text-[#0A0A0A]">
-                {tx.reference && tx.reference.trim() !== ""
-                  ? tx.reference
-                  : "—"}
-              </span>
-            </div>
+        <div className="space-y-3 text-sm">
+          <div>
+            <span className="text-neutral-400 block">From</span>
+            <span>{tx.businessName}</span>
+          </div>
+
+          <div>
+            <span className="text-neutral-400 block">Amount</span>
+            <span className="text-lg font-semibold">
+              {Number(tx.amount).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+              })}{" "}
+              {tx.currency}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-neutral-400 block">Reference</span>
+            <span>
+              {tx.reference && tx.reference.trim() !== ""
+                ? tx.reference
+                : "—"}
+            </span>
           </div>
         </div>
+      </div>
 
-        {/* PDF (MISMO BOTÓN) */}
+      {/* ───── DOCUMENTO ───── */}
+      <div className="border border-yellow-500/30 rounded-xl p-5 mb-6 flex items-center justify-between bg-black/30">
+        <div className="flex items-center gap-3">
+          <span className="text-yellow-400 text-xl">📄</span>
+          <span className="font-medium">
+            Receipt RW Capital
+          </span>
+        </div>
+
         <a
           href={`/api/receipt/${tx.publicId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full text-center bg-[#3B5BDB] hover:bg-[#2F4AC6] text-white font-medium py-2 rounded-md transition"
+          className="bg-yellow-500 hover:bg-yellow-400 text-black font-medium px-4 py-2 rounded-lg transition"
         >
-          Download receipt (PDF)
+          Download
         </a>
+      </div>
 
-        {/* FOOTER */}
-        <div className="mt-8 text-[12px] text-[#8A8F98] text-center">
-          RW Capital Holding · Secure Transaction Tracker
-        </div>
+      {/* FOOTER */}
+      <div className="mt-6 text-xs text-neutral-500 text-center">
+        RW Capital Holding · Transaction Tracker
       </div>
     </div>
-  );
+  </div>
+);
+
 }
