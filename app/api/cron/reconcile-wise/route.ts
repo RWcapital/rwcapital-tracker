@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { mapWiseStatus } from "../../../../lib/wiseStatus";
+import { parseWiseReceipt } from "../../../../lib/wise/parseWiseReceipt";
 import { getRecipientNameFromWise } from "../../../../lib/wiseRecipient";
 
 export const runtime = "nodejs";
@@ -44,7 +45,9 @@ export async function GET() {
         if (resolved) recipientName = resolved;
       }
 
-      // 🆕 INSERT DEFINITIVO (SQL CONTROLADO)
+      // ─────────────────────────────────────────────
+      // 🆕 CREAR TRANSACCIÓN
+      // ─────────────────────────────────────────────
       if (!existing) {
         const [row] = await prisma.$queryRawUnsafe<
           { id: string }[]
@@ -68,6 +71,7 @@ export async function GET() {
           RETURNING "id";
         `);
 
+        // 📌 Evento inicial
         await prisma.transactionEvent.create({
           data: {
             transactionId: row.id,
@@ -76,11 +80,34 @@ export async function GET() {
           },
         });
 
+        // ─────────────────────────────────────────────
+        // 🧠 PARSE MT103 DESDE PDF DE WISE
+        // ─────────────────────────────────────────────
+       // ─────────────────────────────────────────────
+// 🧠 PARSE MT103 Y GUARDAR DESTINATARIO FINAL
+// ─────────────────────────────────────────────
+const parsed = await parseWiseReceipt(wiseId);
+
+if (parsed?.finalRecipientName) {
+  await prisma.$executeRawUnsafe(`
+    UPDATE "Transaction"
+    SET
+      "finalRecipientName" = '${parsed.finalRecipientName.replace(/'/g, "''")}',
+      "finalRecipientSwift" = ${parsed.finalRecipientSwift ? `'${parsed.finalRecipientSwift}'` : "NULL"},
+      "finalRecipientAddr" = ${parsed.finalRecipientAddress ? `'${parsed.finalRecipientAddress.replace(/'/g, "''")}'` : "NULL"},
+      "updatedAt" = NOW()
+    WHERE "id" = '${row.id}'
+  `);
+}
+
+
         created++;
         continue;
       }
 
-      // 🔄 UPDATE STATUS NORMAL (Prisma OK)
+      // ─────────────────────────────────────────────
+      // 🔄 UPDATE DE ESTADO
+      // ─────────────────────────────────────────────
       if (existing.status !== mapped.publicStatus) {
         await prisma.transaction.update({
           where: { id: existing.id },
