@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma"; // Asegúrate de que esta ruta sea correcta
+import { prisma } from "../../../../lib/prisma"; // Verifica que esta ruta sea correcta
 import { mapWiseStatus } from "../../../../lib/wiseStatus";
 
 export const runtime = "nodejs";
@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: Params) {
   }
 
   // 1️⃣ Buscar en DB
-  // FIX: Agregamos ': any' para evitar el error de TypeScript al reasignar la variable
+  // Usamos 'any' aquí para evitar conflictos de tipos estrictos
   let tx: any = await prisma.transaction.findFirst({
     where: {
       OR: [
@@ -51,11 +51,11 @@ export async function GET(_req: Request, { params }: Params) {
     const wise = await res.json();
     const mapped = mapWiseStatus(wise.status);
 
-    // Intentamos obtener el nombre del destinatario
     const recipientNameVal = wise.details?.accountHolderName || wise.targetAccount?.accountHolderName || "Beneficiary";
 
     // 3️⃣ GUARDAR EN DB
-    // Al usar 'any' arriba, TypeScript ya no bloqueará esta asignación
+    // FIX: Agregamos 'as any' al objeto data para que TypeScript no bloquee el build
+    // si no ha detectado la actualización de prisma client todavía.
     tx = await prisma.transaction.create({
       data: {
         publicId: wise.id.toString(),
@@ -72,7 +72,7 @@ export async function GET(_req: Request, { params }: Params) {
             occurredAt: new Date(wise.created),
           },
         },
-      },
+      } as any, 
       include: {
         events: { orderBy: { occurredAt: "asc" } },
         documents: true,
@@ -84,7 +84,7 @@ export async function GET(_req: Request, { params }: Params) {
   return NextResponse.json({
     publicId: tx.publicId,
     businessName: tx.businessName,
-    recipientName: tx.recipientName, // Dato crítico que faltaba
+    recipientName: tx.recipientName,
     amount: tx.amount.toString(),
     currency: tx.currency,
     status: tx.status,
