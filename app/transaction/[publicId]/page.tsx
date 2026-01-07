@@ -17,54 +17,64 @@ export async function generateMetadata(
       amount: true,
       currency: true,
       businessName: true,
-      recipientName: true,
+      status: true,
     },
   });
 
+  // Fallback seguro
   if (!tx) {
     return {
-      title: "Seguimiento de transferencia",
-      description: "Estado de la transferencia",
+      title: "Transfer in progress",
+      description: "Transfer tracking",
+      openGraph: {
+        title: "Transfer in progress",
+        description: "Transfer tracking",
+      },
+      twitter: {
+        card: "summary",
+        title: "Transfer in progress",
+        description: "Transfer tracking",
+      },
     };
   }
 
   const amount = Number(tx.amount).toLocaleString("en-US", {
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 
-  const title = `${amount} ${tx.currency}`;
+  const isCompleted =
+    tx.status === "SENT" || tx.status === "COMPLETED";
+
+  const title = `${amount} ${tx.currency} · ${
+    isCompleted ? "Transfer completed" : "Transfer in progress"
+  }`;
+
   const description = `Arriving from ${tx.businessName}`;
 
   return {
     title,
     description,
+
     openGraph: {
       title,
       description,
       url: `https://track.rwcapitalholding.com/transaction/${params.publicId}`,
-      siteName: "RWC Capital",
-      images: [
-        {
-          url: `https://track.rwcapitalholding.com/api/og/transaction/${params.publicId}`,
-          width: 1200,
-          height: 630,
-        },
-      ],
+      siteName: "RW Capital Holding",
       type: "website",
     },
+
     twitter: {
-      card: "summary_large_image",
+      card: "summary", // 👈 CLAVE: WhatsApp se comporta mejor así
       title,
       description,
-      images: [
-        `https://track.rwcapitalholding.com/api/og/transaction/${params.publicId}`,
-      ],
     },
   };
 }
 
 /* ⚠️ IMPORTANTE: evitar cache en producción */
 export const dynamic = "force-dynamic";
+
 
 /* ──────────────────────────────
    CONFIGURACIÓN Y HELPERS
