@@ -1,51 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { mapWiseStatus } from "../../../../lib/wiseStatus";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
 /* ──────────────────────────────
-   TIPOS
+   PARAMS (Next.js 15)
 ────────────────────────────── */
-
-// CORRECCIÓN: En Next.js 15+, params es una Promise
 type RouteParams = {
   params: Promise<{
     publicId: string;
   }>;
 };
 
-// Se agregó 'orderBy' en la definición del tipo para que coincida con la consulta
-type TransactionWithRelations = Prisma.TransactionGetPayload<{
-  select: {
-    id: true;
-    publicId: true;
-    wiseTransferId: true;
-    businessName: true;
-    recipientName: true;
-    amount: true;
-    currency: true;
-    status: true;
-    reference: true;
-    createdAt: true;
-    updatedAt: true;
-    events: {
-      orderBy: { occurredAt: "asc" }; // Indispensable para que TypeScript no falle
-      select: {
-        occurredAt: true;
-        label: true;
-      };
-    };
-    documents: {
-      select: {
-        id: true,
-        type: true,
-        fileUrl: true,
-      };
-    };
-  };
-}>;
+/* ──────────────────────────────
+   SELECT TIPADO (CLAVE DEL FIX)
+────────────────────────────── */
+const transactionSelect = Prisma.validator<Prisma.TransactionSelect>()({
+  id: true,
+  publicId: true,
+  wiseTransferId: true,
+  businessName: true,
+  recipientName: true,
+  amount: true,
+  currency: true,
+  status: true,
+  reference: true,
+  createdAt: true,
+  updatedAt: true,
+  events: {
+    orderBy: { occurredAt: "asc" },
+    select: {
+      occurredAt: true,
+      label: true,
+    },
+  },
+  documents: {
+    select: {
+      id: true,
+      type: true,
+      fileUrl: true,
+    },
+  },
+});
 
 /* ──────────────────────────────
    HELPER: DESTINATARIO DESDE WISE
@@ -79,16 +77,21 @@ async function fetchRecipientName(
 ────────────────────────────── */
 export async function GET(
   _req: NextRequest,
-  { params }: RouteParams // Usamos el tipo corregido aquí
+  { params }: RouteParams
 ) {
-  // CORRECCIÓN: Se debe usar await para obtener los params
   const { publicId } = await params;
 
   if (!publicId) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
-  const WISE_TOKEN = process.env.WISE_API_TOKEN ?? "";
+  const WISE_TOKEN = process.env.WISE_API_TOKEN;
+  if (!WISE_TOKEN) {
+    return NextResponse.json(
+      { error: "Wise API token not configured" },
+      { status: 500 }
+    );
+  }
 
   /* ──────────────────────────────
      1️⃣ BUSCAR EN DB
@@ -97,34 +100,8 @@ export async function GET(
     where: {
       OR: [{ publicId }, { wiseTransferId: publicId }],
     },
-    select: {
-      id: true,
-      publicId: true,
-      wiseTransferId: true,
-      businessName: true,
-      recipientName: true,
-      amount: true,
-      currency: true,
-      status: true,
-      reference: true,
-      createdAt: true,
-      updatedAt: true,
-      events: {
-        orderBy: { occurredAt: "asc" },
-        select: {
-          occurredAt: true,
-          label: true,
-        },
-      },
-      documents: {
-        select: {
-          id: true,
-          type: true,
-          fileUrl: true,
-        },
-      },
-    },
-  }) as TransactionWithRelations | null; // Cast para asegurar compatibilidad
+    select: transactionSelect,
+  });
 
   /* ──────────────────────────────
      2️⃣ AUTO-HEAL recipientName
@@ -147,34 +124,8 @@ export async function GET(
           tx = await prisma.transaction.update({
             where: { id: tx.id },
             data: { recipientName: resolvedName },
-            select: {
-              id: true,
-              publicId: true,
-              wiseTransferId: true,
-              businessName: true,
-              recipientName: true,
-              amount: true,
-              currency: true,
-              status: true,
-              reference: true,
-              createdAt: true,
-              updatedAt: true,
-              events: {
-                orderBy: { occurredAt: "asc" },
-                select: {
-                  occurredAt: true,
-                  label: true,
-                },
-              },
-              documents: {
-                select: {
-                  id: true,
-                  type: true,
-                  fileUrl: true,
-                },
-              },
-            },
-          }) as TransactionWithRelations;
+            select: transactionSelect,
+          });
         }
       }
     } catch (err) {
@@ -225,34 +176,8 @@ export async function GET(
           },
         },
       },
-      select: {
-        id: true,
-        publicId: true,
-        wiseTransferId: true,
-        businessName: true,
-        recipientName: true,
-        amount: true,
-        currency: true,
-        status: true,
-        reference: true,
-        createdAt: true,
-        updatedAt: true,
-        events: {
-          orderBy: { occurredAt: "asc" },
-          select: {
-            occurredAt: true,
-            label: true,
-          },
-        },
-        documents: {
-          select: {
-            id: true,
-            type: true,
-            fileUrl: true,
-          },
-        },
-      },
-    }) as TransactionWithRelations;
+      select: transactionSelect,
+    });
   }
 
   /* ──────────────────────────────
