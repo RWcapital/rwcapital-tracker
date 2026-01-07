@@ -2,7 +2,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 
 /* ──────────────────────────────
-   TIPOS (SIN CAMBIOS)
+   TIPOS
 ────────────────────────────── */
 type TimelineEvent = {
   date: string;
@@ -22,7 +22,7 @@ type Transaction = {
 };
 
 /* ──────────────────────────────
-   TIMELINE BASE (SIN CAMBIOS)
+   TIMELINE BASE (WISE)
 ────────────────────────────── */
 const WISE_TIMELINE = [
   "El remitente ha creado tu transferencia",
@@ -34,7 +34,7 @@ const WISE_TIMELINE = [
 ];
 
 /* ──────────────────────────────
-   FETCH (SIN CAMBIOS)
+   FETCH
 ────────────────────────────── */
 async function getTransaction(publicId: string): Promise<Transaction | null> {
   const res = await fetch(
@@ -62,7 +62,7 @@ export default async function TransactionPage({
   const isCompleted = tx.status?.toUpperCase() === "COMPLETED";
 
   /* ──────────────────────────────
-     ÚLTIMA FECHA REAL (SIN CAMBIOS)
+     ÚLTIMA FECHA REAL
   ────────────────────────────── */
   const lastRealEvent = [...tx.timeline]
     .sort(
@@ -89,7 +89,7 @@ export default async function TransactionPage({
   );
 
   /* ──────────────────────────────
-     TIMELINE ENRIQUECIDO (SIN CAMBIOS)
+     TIMELINE ENRIQUECIDO (VIVO)
   ────────────────────────────── */
   const enrichedTimeline = WISE_TIMELINE.map(
     (label, index) => {
@@ -111,58 +111,61 @@ export default async function TransactionPage({
   );
 
   return (
-    <div className="min-h-screen bg-fintech flex justify-center px-4 py-16 relative overflow-hidden">
+    <div className="min-h-screen bg-fintech flex justify-center px-4 py-10 relative overflow-hidden">
+      {/* Glow ambiental */}
+      <div className="absolute inset-0 flex justify-center pointer-events-none">
+        <div className="w-[520px] h-[520px] mt-40 bg-yellow-500/10 blur-[160px] animate-pulse" />
+      </div>
 
-      {/* ───── CARD PRINCIPAL ───── */}
-      <div className="relative z-10 w-full max-w-xl card-fintech animate-fade-in">
-
+      {/* Card */}
+      <div className="relative z-10 w-full max-w-xl bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-neutral-700/50 shadow-[0_20px_60px_rgba(0,0,0,0.6)] p-8 animate-fade-in">
         {/* LOGO */}
-        <div className="flex justify-center mb-8 animate-fade-in-slow">
+        <div className="flex justify-center mb-8">
           <Image
             src="/logo.png"
             alt="RW Capital Holding"
-            width={200}
+            width={220}
             height={80}
             priority
           />
         </div>
 
         {/* HEADER */}
-        <h1 className="text-title-lg mb-2">
+        <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2 text-white">
           {isCompleted
-            ? "Transferencia completada"
-            : "Estamos procesando tu transferencia"}
-        </h1>
-
-        <p className="text-body text-[var(--color-text-secondary)] mb-6">
-          Destinatario:{" "}
-          <span className="font-medium text-[var(--color-text-primary)]">
+            ? "Ya está todo listo,"
+            : "Estamos procesando tu transferencia,"}
+          <br />
+          <span className="font-bold uppercase">
             {tx.recipientName}
           </span>
-        </p>
+        </h1>
 
         {tx.createdAt && (
-          <p className="text-small mb-8">
-            Última actualización:{" "}
+          <p className="text-sm text-neutral-400 mb-6">
             {new Date(tx.createdAt).toLocaleString("es-ES", {
-              dateStyle: "medium",
+              dateStyle: "full",
               timeStyle: "short",
             })}
           </p>
         )}
 
-        {/* ───── TIMELINE (ANIMADO LENTO, STAGGER RESTAURADO) ───── */}
-        <ol className="relative ml-2 mb-10">
+        {/* TIMELINE */}
+        <ol className="relative ml-2 mb-8">
           {enrichedTimeline.map((e, i) => (
             <li
               key={i}
-              className="relative pl-8 pb-8 timeline-item animate-fade-up"
+              className="relative pl-8 pb-8 timeline-item"
               style={{ animationDelay: `${i * 180}ms` }}
             >
               {/* Línea */}
               {i !== enrichedTimeline.length - 1 && (
                 <span
-                  className="absolute left-[6px] top-4 h-full w-px bg-[var(--color-border-subtle)]"
+                  className={`absolute left-[6px] top-4 h-full w-px ${
+                    e.completed
+                      ? "bg-yellow-500"
+                      : "bg-neutral-700"
+                  }`}
                 />
               )}
 
@@ -170,81 +173,39 @@ export default async function TransactionPage({
               <span
                 className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
                   e.completed
-                    ? "bg-[var(--color-brand-primary)] border-[var(--color-brand-primary)]"
-                    : "bg-white border-[var(--color-border-subtle)]"
+                    ? "bg-yellow-500 border-yellow-500"
+                    : "bg-neutral-900 border-neutral-600"
                 } ${
-                  e.isCurrent ? "timeline-dot current" : ""
+                  e.isCurrent
+                    ? "ring-4 ring-yellow-500/30"
+                    : ""
                 }`}
               />
 
-              <p className="text-small">
+              <p className="text-xs text-neutral-400">
                 {e.date
                   ? new Date(e.date).toLocaleString("es-ES", {
-                      dateStyle: "medium",
+                      dateStyle: "full",
                       timeStyle: "short",
                     })
                   : "Pendiente"}
               </p>
 
-              <p className="text-body">
+              <p
+                className={`text-sm ${
+                  e.completed
+                    ? "text-white"
+                    : "text-neutral-500"
+                }`}
+              >
                 {e.label}
               </p>
             </li>
           ))}
         </ol>
 
-        {/* ───── TRANSFER DETAILS (MISMA SECCIÓN) ───── */}
-        <div className="border-t border-[var(--color-border-subtle)] pt-6 mb-6 space-y-4">
-
-          <div>
-            <p className="text-small">Desde</p>
-            <p className="text-body">{tx.businessName}</p>
-          </div>
-
-          <div>
-            <p className="text-small">Monto</p>
-            <p className="text-title-lg">
-              {Number(tx.amount).toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-              })}{" "}
-              {tx.currency}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-small">Referencia</p>
-            <p className="text-body">
-              {tx.reference && tx.reference.trim() !== ""
-                ? tx.reference
-                : "—"}
-            </p>
-          </div>
-        </div>
-
-        {/* ───── DOCUMENTO (MISMO FLOW) ───── */}
-        <div className="border border-[var(--color-border-subtle)] rounded-lg p-4 flex items-center justify-between mb-6">
-
-          <span className="text-body">
-            Comprobante de transferencia
-          </span>
-
-          <a
-            href={`/api/receipt/${tx.publicId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="
-              bg-[var(--color-brand-primary)]
-              hover:bg-[var(--color-brand-primary-hover)]
-              text-white text-sm font-medium
-              px-4 py-2 rounded-md transition
-            "
-          >
-            Descargar
-          </a>
-        </div>
-
         {/* FOOTER */}
-        <div className="text-small text-center">
+        <div className="mt-6 text-xs text-neutral-500 text-center">
           RW Capital Holding · Transaction Tracker
         </div>
       </div>
