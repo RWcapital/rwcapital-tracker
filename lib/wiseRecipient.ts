@@ -1,25 +1,27 @@
-// lib/wiseRecipient.ts
-
 export async function getRecipientNameFromWise(
-  targetAccountId: number
+  accountId: number
 ): Promise<string | null> {
   try {
     const res = await fetch(
-      `https://api.wise.com/v1/accounts/${targetAccountId}`,
+      `https://api.wise.com/v1/accounts/${accountId}`,
       {
         headers: {
           Authorization: `Bearer ${process.env.WISE_API_TOKEN}`,
+          "Content-Type": "application/json",
         },
       }
     );
 
     if (!res.ok) return null;
 
-    const account = await res.json();
+    const data = await res.json();
 
-    return account.accountHolderName || null;
-  } catch (error) {
-    console.error("Error fetching recipient account:", error);
+    return (
+      data.accountHolderName ??
+      data.details?.accountHolderName ??
+      null
+    );
+  } catch {
     return null;
   }
 }
