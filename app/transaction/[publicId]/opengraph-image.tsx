@@ -1,9 +1,7 @@
 import { ImageResponse } from "next/og";
-import { prisma } from "@/lib/prisma";
 
 export const runtime = "edge";
 
-/* Tamaño estándar OpenGraph */
 export const size = {
   width: 1200,
   height: 630,
@@ -14,22 +12,13 @@ export default async function Image({
 }: {
   params: { publicId: string };
 }) {
-  const tx = await prisma.transaction.findFirst({
-    where: {
-      OR: [
-        { publicId: params.publicId },
-        { wiseTransferId: params.publicId },
-      ],
-    },
-    select: {
-      amount: true,
-      currency: true,
-      businessName: true,
-      recipientName: true,
-    },
-  });
+  // 👉 JAMÁS Prisma aquí
+  const res = await fetch(
+    `https://track.rwcapitalholding.com/api/transaction/${params.publicId}`,
+    { cache: "no-store" }
+  );
 
-  if (!tx) {
+  if (!res.ok) {
     return new ImageResponse(
       (
         <div
@@ -39,9 +28,9 @@ export default async function Image({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "#ffffff",
             fontSize: 48,
             fontWeight: 700,
+            background: "#fff",
           }}
         >
           Transfer not found
@@ -50,6 +39,8 @@ export default async function Image({
       size
     );
   }
+
+  const tx = await res.json();
 
   const amount = Number(tx.amount).toLocaleString("en-US", {
     minimumFractionDigits: 2,
@@ -64,9 +55,9 @@ export default async function Image({
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "80px",
+          padding: 80,
           background: "#ffffff",
-          color: "#000000",
+          color: "#000",
           fontFamily: "Arial, sans-serif",
         }}
       >
