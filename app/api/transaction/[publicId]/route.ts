@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { mapWiseStatus } from "../../../../lib/wiseStatus";
 import type { Prisma } from "@prisma/client";
@@ -74,8 +74,12 @@ async function fetchRecipientName(
 /* ──────────────────────────────
    ROUTE
 ────────────────────────────── */
-export async function GET(_req: Request, { params }: RouteParams) {
-  const { publicId } = await params; // Se agrega await aquí
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { publicId: string } }
+) {
+  const { publicId } = params;
+ // Se agrega await aquí
 
   if (!publicId) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
