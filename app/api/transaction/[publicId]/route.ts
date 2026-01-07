@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { mapWiseStatus } from "../../../../lib/wiseStatus";
+import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,18 @@ type RouteParams = {
     publicId: string;
   }>;
 };
+
+/* ──────────────────────────────
+   TIPO CORRECTO PARA INCLUDE
+────────────────────────────── */
+type TransactionWithRelations = Prisma.TransactionGetPayload<{
+  include: {
+    events: {
+      orderBy: { occurredAt: "asc" };
+    };
+    documents: true;
+  };
+}>;
 
 /* ──────────────────────────────
    HELPER: DESTINATARIO DESDE WISE
@@ -60,20 +73,25 @@ export async function GET(
     );
   }
 
-  /* 1️⃣ BUSCAR EN DB */
-  let tx = await prisma.transaction.findFirst({
-    where: {
-      OR: [{ publicId }, { wiseTransferId: publicId }],
-    },
-    include: {
-      events: {
-        orderBy: { occurredAt: "asc" },
+  /* ──────────────────────────────
+     1️⃣ BUSCAR EN DB
+  ────────────────────────────── */
+  let tx: TransactionWithRelations | null =
+    await prisma.transaction.findFirst({
+      where: {
+        OR: [{ publicId }, { wiseTransferId: publicId }],
       },
-      documents: true,
-    },
-  });
+      include: {
+        events: {
+          orderBy: { occurredAt: "asc" },
+        },
+        documents: true,
+      },
+    });
 
-  /* 2️⃣ AUTO-HEAL recipientName */
+  /* ──────────────────────────────
+     2️⃣ AUTO-HEAL recipientName
+  ────────────────────────────── */
   if (tx && (!tx.recipientName || tx.recipientName === "Cuenta Wise")) {
     const res = await fetch(
       `https://api.wise.com/v1/transfers/${tx.wiseTransferId}`,
@@ -102,7 +120,9 @@ export async function GET(
     }
   }
 
-  /* 3️⃣ CREAR SI NO EXISTE */
+  /* ──────────────────────────────
+     3️⃣ CREAR SI NO EXISTE
+  ────────────────────────────── */
   if (!tx) {
     const res = await fetch(
       `https://api.wise.com/v1/transfers/${publicId}`,
@@ -150,7 +170,9 @@ export async function GET(
     });
   }
 
-  /* 4️⃣ RESPUESTA FINAL */
+  /* ──────────────────────────────
+     4️⃣ RESPUESTA FINAL
+  ────────────────────────────── */
   return NextResponse.json({
     publicId: tx.publicId,
     businessName: tx.businessName,
