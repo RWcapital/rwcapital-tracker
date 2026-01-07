@@ -9,9 +9,9 @@ export const runtime = "nodejs";
    TIPOS
 ────────────────────────────── */
 type RouteParams = {
-  params: {
+  params: Promise<{ // Corregido: Ahora es una Promesa
     publicId: string;
-  };
+  }>;
 };
 
 type TransactionWithRelations = Prisma.TransactionGetPayload<{
@@ -74,7 +74,7 @@ async function fetchRecipientName(
    ROUTE
 ────────────────────────────── */
 export async function GET(_req: Request, { params }: RouteParams) {
-  const { publicId } = params;
+  const { publicId } = await params; // Corregido: Se agrega el await
 
   if (!publicId) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
