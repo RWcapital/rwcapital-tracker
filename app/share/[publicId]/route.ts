@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { publicId: string } }
+  { params }: { params: Promise<{ publicId: string }> }
 ) {
+  const { publicId } = await params;
+
   const tx = await prisma.transaction.findFirst({
     where: {
       OR: [
-        { publicId: params.publicId },
-        { wiseTransferId: params.publicId },
+        { publicId },
+        { wiseTransferId: publicId },
       ],
     },
     select: {
@@ -36,12 +41,12 @@ export async function GET(
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body>
-  <p>${amount} ${tx.currency}</p>
-  <p>Arriving from ${tx.businessName}</p>
+  ${amount} ${tx.currency}<br/>
+  Arriving from ${tx.businessName}
 
   <script>
     setTimeout(() => {
-      window.location.href = "/transaction/${params.publicId}";
+      window.location.href = "/transaction/${publicId}";
     }, 200);
   </script>
 </body>
