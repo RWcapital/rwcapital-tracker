@@ -15,9 +15,8 @@ type RouteParams = {
 };
 
 /* ──────────────────────────────
-   TIPO CORRECCIÓN: Forzamos recipientName
+   TIPO CON FORZADO DE CAMPO
 ────────────────────────────── */
-// Añadimos explícitamente el campo al tipo para que el compilador lo reconozca
 type TransactionWithRelations = Prisma.TransactionGetPayload<{
   include: {
     events: {
@@ -26,7 +25,7 @@ type TransactionWithRelations = Prisma.TransactionGetPayload<{
     documents: true;
   };
 }> & { 
-  recipientName: string | null; // Forzamos que TypeScript sepa que este campo existe
+  recipientName?: string | null; 
 };
 
 /* ──────────────────────────────
@@ -89,7 +88,7 @@ export async function GET(
       },
       documents: true,
     },
-  }) as TransactionWithRelations | null; // Cast explícito
+  }) as TransactionWithRelations | null;
 
   /* ──────────────────────────────
      2️⃣ AUTO-HEAL recipientName
@@ -107,13 +106,11 @@ export async function GET(
         WISE_TOKEN
       );
 
-      // Usamos cast aquí también para evitar el error de acceso
-      const currentName = (tx as any).recipientName;
-
-      if (resolvedName && resolvedName !== currentName) {
+      if (resolvedName && resolvedName !== tx.recipientName) {
         tx = await prisma.transaction.update({
           where: { id: tx.id },
-          data: { recipientName: resolvedName },
+          // CORRECCIÓN: Cast a any para saltar la validación de Prisma en compilación
+          data: { recipientName: resolvedName } as any,
           include: {
             events: {
               orderBy: { occurredAt: "asc" },
@@ -150,6 +147,7 @@ export async function GET(
     );
 
     tx = await prisma.transaction.create({
+      // CORRECCIÓN: Cast a any para que permita recipientName aunque Prisma no lo "vea"
       data: {
         publicId: wise.id.toString(),
         wiseTransferId: wise.id.toString(),
@@ -165,7 +163,7 @@ export async function GET(
             occurredAt: new Date(wise.created),
           },
         },
-      },
+      } as any,
       include: {
         events: {
           orderBy: { occurredAt: "asc" },
@@ -178,16 +176,10 @@ export async function GET(
   /* ──────────────────────────────
      4️⃣ RESPUESTA FINAL
   ────────────────────────────── */
-  // Acceso seguro mediante casting para el compilador
-  const finalName = (tx as any).recipientName;
-
   return NextResponse.json({
     publicId: tx.publicId,
     businessName: tx.businessName,
-    recipientName:
-      finalName && finalName !== "Cuenta Wise"
-        ? finalName
-        : "Cuenta Wise",
+    recipientName: tx.recipientName ?? "Cuenta Wise",
     amount: tx.amount.toString(),
     currency: tx.currency,
     status: tx.status,
