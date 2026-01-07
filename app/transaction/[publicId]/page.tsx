@@ -22,7 +22,7 @@ type Transaction = {
 };
 
 /* ──────────────────────────────
-   TIMELINE BASE (WISE)
+   TIMELINE BASE (WISE / CBPAY)
 ────────────────────────────── */
 const WISE_TIMELINE = [
   "El remitente ha creado tu transferencia",
@@ -36,7 +36,9 @@ const WISE_TIMELINE = [
 /* ──────────────────────────────
    FETCH
 ────────────────────────────── */
-async function getTransaction(publicId: string): Promise<Transaction | null> {
+async function getTransaction(
+  publicId: string
+): Promise<Transaction | null> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_URL}/api/transaction/${publicId}`,
     { cache: "no-store" }
@@ -52,28 +54,29 @@ async function getTransaction(publicId: string): Promise<Transaction | null> {
 export default async function TransactionPage({
   params,
 }: {
-  params: Promise<{ publicId: string }>;
+  params: { publicId: string };
 }) {
-  const { publicId } = await params;
-  const tx = await getTransaction(publicId);
-
+  const tx = await getTransaction(params.publicId);
   if (!tx) notFound();
 
   const isCompleted = tx.status?.toUpperCase() === "COMPLETED";
 
-  /* ───────── Última fecha real ───────── */
-  const lastRealEvent = [...tx.timeline]
-    .sort(
-      (a, b) =>
-        new Date(a.date).getTime() -
-        new Date(b.date).getTime()
-    )
-    .at(-1);
+  /* ──────────────────────────────
+     ÚLTIMO EVENTO REAL
+  ────────────────────────────── */
+  const sortedTimeline = [...tx.timeline].sort(
+    (a, b) =>
+      new Date(a.date).getTime() -
+      new Date(b.date).getTime()
+  );
 
+  const lastRealEvent = sortedTimeline.at(-1);
   const fallbackDate =
     lastRealEvent?.date ?? tx.createdAt ?? null;
 
-  /* ───────── Último paso completado ───────── */
+  /* ──────────────────────────────
+     ÍNDICE DEL PASO ACTUAL
+  ────────────────────────────── */
   const lastCompletedIndex = WISE_TIMELINE.reduce(
     (acc, label, index) => {
       const exists = tx.timeline.some(
@@ -84,7 +87,6 @@ export default async function TransactionPage({
     -1
   );
 
-  /* ───────── Timeline vivo (NO TOCAR) ───────── */
   const enrichedTimeline = WISE_TIMELINE.map(
     (label, index) => {
       const realEvent = tx.timeline.find(
@@ -106,14 +108,13 @@ export default async function TransactionPage({
 
   return (
     <div className="min-h-screen bg-fintech-light flex justify-center px-4 py-12 relative overflow-hidden">
-      {/* Fondo suave */}
+      {/* Fondo suave estilo Mercury */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-indigo-500/10 blur-[180px]" />
         <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-blue-400/10 blur-[160px]" />
       </div>
 
-      {/* Card */}
-      <div className="relative z-10 w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] shadow-[0_20px_60px_rgba(15,23,42,0.08)] p-8 animate-fade-in-slow">
+      <div className="relative w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
         {/* LOGO */}
         <div className="flex justify-center mb-8">
           <Image
@@ -126,18 +127,32 @@ export default async function TransactionPage({
         </div>
 
         {/* HEADER */}
-        <h1 className="text-[22px] font-semibold text-[#0A0A0A] leading-tight mb-2">
+        <h1 className="text-[22px] font-semibold leading-tight mb-3 text-[#0A0A0A]">
           {isCompleted
             ? "Transfer completed"
             : "Transfer in progress"}
-          <br />
-          <span className="font-medium text-[#3B5BDB]">
-            {tx.recipientName}
-          </span>
         </h1>
 
+        {/* FROM / TO */}
+        <div className="mb-6 space-y-1 text-[14px]">
+          <div className="text-[#5F6368]">
+            From:{" "}
+            <span className="text-[#0A0A0A] font-medium">
+              {tx.businessName}
+            </span>
+          </div>
+
+          <div className="text-[#5F6368]">
+            To:{" "}
+            <span className="text-[#0A0A0A] font-semibold uppercase">
+              {tx.recipientName || "—"}
+            </span>
+          </div>
+        </div>
+
+        {/* FECHA */}
         {tx.createdAt && (
-          <p className="text-[13px] text-[#5F6368] mb-6">
+          <p className="text-[13px] text-[#8A8F98] mb-6">
             {new Date(tx.createdAt).toLocaleString("en-US", {
               dateStyle: "long",
               timeStyle: "short",
@@ -145,13 +160,13 @@ export default async function TransactionPage({
           </p>
         )}
 
-        {/* TIMELINE */}
-        <ol className="relative ml-2 mb-8">
+        {/* TIMELINE (MISMA LÓGICA) */}
+        <ol className="relative ml-2 mb-10">
           {enrichedTimeline.map((e, i) => (
             <li
               key={i}
               className="relative pl-8 pb-8 timeline-item"
-              style={{ animationDelay: `${i * 180}ms` }}
+              style={{ animationDelay: `${i * 160}ms` }}
             >
               {i !== enrichedTimeline.length - 1 && (
                 <span
@@ -178,7 +193,7 @@ export default async function TransactionPage({
               <p className="text-[12px] text-[#8A8F98]">
                 {e.date
                   ? new Date(e.date).toLocaleString("en-US", {
-                      dateStyle: "long",
+                      dateStyle: "short",
                       timeStyle: "short",
                     })
                   : "Pending"}
@@ -197,7 +212,7 @@ export default async function TransactionPage({
           ))}
         </ol>
 
-        {/* TRANSFER DETAILS (RESTAURADO) */}
+        {/* DETAILS (MISMO CONTENIDO) */}
         <div className="border border-[#E6E8EB] rounded-lg p-5 mb-6 bg-[#F7F8FA]">
           <h3 className="text-[#3B5BDB] font-semibold mb-4">
             Transfer details
@@ -205,13 +220,8 @@ export default async function TransactionPage({
 
           <div className="space-y-3 text-[14px]">
             <div>
-              <span className="block text-[#5F6368]">From</span>
-              <span>{tx.businessName}</span>
-            </div>
-
-            <div>
-              <span className="block text-[#5F6368]">Amount</span>
-              <span className="text-[18px] font-semibold">
+              <span className="text-[#5F6368] block">Amount</span>
+              <span className="text-[18px] font-semibold text-[#0A0A0A]">
                 {Number(tx.amount).toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                 })}{" "}
@@ -220,8 +230,10 @@ export default async function TransactionPage({
             </div>
 
             <div>
-              <span className="block text-[#5F6368]">Reference</span>
-              <span>
+              <span className="text-[#5F6368] block">
+                Reference
+              </span>
+              <span className="text-[#0A0A0A]">
                 {tx.reference && tx.reference.trim() !== ""
                   ? tx.reference
                   : "—"}
@@ -230,28 +242,19 @@ export default async function TransactionPage({
           </div>
         </div>
 
-        {/* DOWNLOAD PDF (RESTAURADO) */}
-        <div className="border border-[#E6E8EB] rounded-lg p-5 flex items-center justify-between bg-[#F7F8FA]">
-          <div className="flex items-center gap-3">
-            <span className="text-[#3B5BDB] text-lg">📄</span>
-            <span className="font-medium">
-              Transfer receipt (PDF)
-            </span>
-          </div>
-
-          <a
-            href={`/api/receipt/${tx.publicId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-[#3B5BDB] hover:bg-[#2F4AC6] text-white font-medium px-4 py-2 rounded-md transition"
-          >
-            Download
-          </a>
-        </div>
+        {/* PDF (MISMO BOTÓN) */}
+        <a
+          href={`/api/receipt/${tx.publicId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full text-center bg-[#3B5BDB] hover:bg-[#2F4AC6] text-white font-medium py-2 rounded-md transition"
+        >
+          Download receipt (PDF)
+        </a>
 
         {/* FOOTER */}
-        <div className="mt-6 text-[12px] text-[#8A8F98] text-center">
-          RW Capital Holding · Transaction tracker
+        <div className="mt-8 text-[12px] text-[#8A8F98] text-center">
+          RW Capital Holding · Secure Transaction Tracker
         </div>
       </div>
     </div>
