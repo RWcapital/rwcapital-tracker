@@ -80,15 +80,18 @@ export default async function TransactionPage({
   // Prioridad: 1. Nombre Destinatario -> 2. Nombre Negocio -> 3. "Beneficiario"
 let displayName = "Cuenta Wise";
 
-// 1️⃣ Beneficiario final real (MT103)
-if (tx.finalRecipientName && tx.finalRecipientName.trim() !== "") {
+// 1️⃣ Beneficiario bancario real (solo si MT103 trae nombre útil)
+if (
+  tx.finalRecipientName &&
+  tx.finalRecipientName.trim() !== "" &&
+  tx.finalRecipientName.toUpperCase() !== "BENEFICIARY"
+) {
   displayName = tx.finalRecipientName;
 
-// 2️⃣ Fallback: cuenta Wise (si es distinta al emisor)
+// 2️⃣ Beneficiario comercial (Wise UI / Combined disclosure)
 } else if (
   tx.recipientName &&
-  tx.recipientName.trim() !== "" &&
-  tx.recipientName !== tx.businessName
+  tx.recipientName.trim() !== ""
 ) {
   displayName = tx.recipientName;
 }
