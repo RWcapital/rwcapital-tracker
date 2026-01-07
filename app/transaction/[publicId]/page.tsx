@@ -22,7 +22,7 @@ type Transaction = {
 };
 
 /* ──────────────────────────────
-   TIMELINE DEFINITIVO (Sincronizado con wiseStatus.ts)
+   TIMELINE (Match exacto con WiseStatus)
 ────────────────────────────── */
 const WISE_TIMELINE = [
   "El remitente ha creado tu transferencia",
@@ -38,7 +38,7 @@ const WISE_TIMELINE = [
 async function getTransaction(publicId: string): Promise<Transaction | null> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_URL}/api/transaction/${publicId}`,
-    { cache: "no-store" } // Importante: Sin caché para ver actualizaciones al instante
+    { cache: "no-store" }
   );
 
   if (!res.ok) return null;
@@ -46,7 +46,7 @@ async function getTransaction(publicId: string): Promise<Transaction | null> {
 }
 
 /* ──────────────────────────────
-   COMPONENTE DE PÁGINA
+   COMPONENTE PAGE
 ────────────────────────────── */
 export default async function TransactionPage({
   params,
@@ -58,46 +58,42 @@ export default async function TransactionPage({
 
   if (!tx) notFound();
 
-  // 1. Detectar si está completada (por status general o por evento final)
+  // 1. Detectar si está completada (Lógica reforzada)
   const statusUpper = tx.status?.toUpperCase() || "";
   const isCompleted =
     statusUpper === "COMPLETED" ||
     statusUpper === "SUCCESS" ||
-    tx.timeline.some((e) =>
-      e.label.includes("Tu dinero debería haber llegado")
-    );
+    statusUpper === "FUNDS_SENT" || // A veces Wise usa funds_sent como final en ciertos bancos
+    tx.timeline.some((e) => e.label.includes("Tu dinero debería haber llegado"));
 
-  // 2. Ordenar eventos cronológicamente
+  // 2. Ordenar eventos
   const sortedEvents = [...tx.timeline].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
   const lastRealEvent = sortedEvents.at(-1);
-  const fallbackDate =
-    lastRealEvent?.date ?? tx.createdAt ?? new Date().toISOString();
+  const fallbackDate = lastRealEvent?.date ?? tx.createdAt ?? new Date().toISOString();
 
-  // 3. Calcular hasta qué paso pintar (Logic Fill)
+  // 3. Lógica del Timeline (Progreso)
   let lastCompletedIndex = -1;
 
   if (isCompleted) {
+    // Si el status dice completado, FORZAMOS que todo se vea azul
     lastCompletedIndex = WISE_TIMELINE.length - 1;
   } else {
-    // Buscamos el paso más avanzado que coincida con los eventos
+    // Si no, buscamos el paso más avanzado
     lastCompletedIndex = WISE_TIMELINE.reduce((maxIndex, stepLabel, index) => {
       const stepClean = stepLabel.toLowerCase().trim();
-      
       const found = tx.timeline.some((e) => {
         const eventClean = e.label.toLowerCase().trim();
         return eventClean.includes(stepClean) || stepClean.includes(eventClean);
       });
-
       return found ? index : maxIndex;
     }, -1);
   }
 
-  // 4. Construir el objeto para renderizar
+  // 4. Construir objeto visual
   const enrichedTimeline = WISE_TIMELINE.map((label, index) => {
-    // Buscar evento real para obtener la fecha exacta
     const realEvent = tx.timeline.find(
       (e) =>
         e.label.toLowerCase().includes(label.toLowerCase()) ||
@@ -106,7 +102,7 @@ export default async function TransactionPage({
 
     const completed = index <= lastCompletedIndex;
     
-    // Si el paso está completado, mostramos fecha (real o fallback). Si no, null.
+    // Fecha: Si tenemos evento real, usamos esa. Si forzamos completado, usamos fallback.
     const displayDate = completed
       ? realEvent?.date ?? fallbackDate
       : null;
@@ -119,16 +115,21 @@ export default async function TransactionPage({
     };
   });
 
+  // Fallback visual para el nombre
+  const displayName = tx.recipientName && tx.recipientName !== "null" 
+    ? tx.recipientName 
+    : "Beneficiario";
+
   return (
     <div className="min-h-screen bg-fintech-light flex justify-center px-4 py-10 relative overflow-hidden font-sans">
       
-      {/* Fondo Glow Animado */}
+      {/* Fondo Glow */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-indigo-500/10 blur-[180px]" />
         <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-blue-400/10 blur-[160px]" />
       </div>
 
-      {/* Card Principal con Animación de Entrada */}
+      {/* Card Principal */}
       <div className="relative z-10 w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)] animate-fade-in">
         
         {/* LOGO */}
@@ -142,12 +143,12 @@ export default async function TransactionPage({
           />
         </div>
 
-        {/* HEADER: Título y Nombre del Beneficiario */}
+        {/* HEADER */}
         <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2 text-[#0A0A0A]">
           {isCompleted ? "Transferencia completada" : "Transferencia en curso"}
           <br />
           <span className="font-bold uppercase text-[#3B5BDB]">
-            {tx.recipientName || "Beneficiario"}
+            {displayName}
           </span>
         </h1>
 
@@ -164,16 +165,15 @@ export default async function TransactionPage({
           </p>
         )}
 
-        {/* TIMELINE VISUAL */}
+        {/* TIMELINE */}
         <ol className="relative ml-2 mb-8 border-l border-[#E6E8EB] md:border-none md:ml-0">
           {enrichedTimeline.map((e, i) => (
             <li
               key={i}
               className="relative pl-8 pb-8 timeline-item"
-              // Animación escalonada para cada item (Cascada)
-              style={{ animationDelay: `${i * 150}ms` }} 
+              style={{ animationDelay: `${i * 150}ms` }}
             >
-              {/* Línea vertical conectora (Solo si no es el último) */}
+              {/* Línea */}
               {i !== enrichedTimeline.length - 1 && (
                 <span
                   className={`absolute left-[6px] top-4 h-full w-px transition-colors duration-500 ${
@@ -182,20 +182,16 @@ export default async function TransactionPage({
                 />
               )}
 
-              {/* Punto indicador (Dot) */}
+              {/* Punto */}
               <span
                 className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 transition-all duration-500 ${
                   e.completed
                     ? "bg-[#3B5BDB] border-[#3B5BDB]"
                     : "bg-white border-[#CBD5E1]"
-                } ${
-                  e.isCurrent
-                    ? "ring-4 ring-[#3B5BDB]/20 scale-110"
-                    : ""
-                }`}
+                } ${e.isCurrent ? "ring-4 ring-[#3B5BDB]/20 scale-110" : ""}`}
               />
 
-              {/* Fecha y Hora */}
+              {/* Fecha */}
               <p className="text-xs text-[#8A8F98] mb-0.5">
                 {e.date
                   ? new Date(e.date).toLocaleDateString("es-ES", {
@@ -206,12 +202,10 @@ export default async function TransactionPage({
                   : "Pendiente"}
               </p>
 
-              {/* Etiqueta del paso */}
+              {/* Label */}
               <p
                 className={`text-sm transition-colors duration-300 ${
-                  e.completed
-                    ? "text-[#0A0A0A] font-medium"
-                    : "text-[#6B7280]"
+                  e.completed ? "text-[#0A0A0A] font-medium" : "text-[#6B7280]"
                 }`}
               >
                 {e.label}
@@ -220,7 +214,7 @@ export default async function TransactionPage({
           ))}
         </ol>
 
-        {/* DETALLES DE LA TRANSFERENCIA */}
+        {/* DETALLES (Aquí agregué el nombre en "Para") */}
         <div className="border border-[#E6E8EB] rounded-lg p-5 mb-6 bg-[#F7F8FA]">
           <h3 className="text-[#3B5BDB] font-semibold mb-4">
             Detalles de la transferencia
@@ -234,10 +228,11 @@ export default async function TransactionPage({
               </span>
             </div>
 
+            {/* AQUÍ ESTÁ EL CAMBIO SOLICITADO */}
             <div>
               <span className="text-[#5F6368] block">Para</span>
               <span className="text-[#0A0A0A] font-medium">
-                {tx.recipientName || "—"}
+                {displayName}
               </span>
             </div>
 
@@ -262,7 +257,7 @@ export default async function TransactionPage({
           </div>
         </div>
 
-        {/* BOTÓN DESCARGA PDF */}
+        {/* BOTÓN PDF */}
         <div className="border border-[#E6E8EB] rounded-lg p-5 mb-6 flex items-center justify-between bg-[#F7F8FA] hover:bg-gray-100 transition-colors">
           <div className="flex items-center gap-3">
             <span className="text-[#3B5BDB] text-xl">📄</span>
@@ -281,7 +276,6 @@ export default async function TransactionPage({
           </a>
         </div>
 
-        {/* FOOTER */}
         <div className="mt-6 text-xs text-[#8A8F98] text-center">
           RW Capital Holding · Transaction Tracker
         </div>

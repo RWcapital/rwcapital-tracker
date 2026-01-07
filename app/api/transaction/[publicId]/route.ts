@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma"; // Verifica que esta ruta sea correcta
+import { prisma } from "../../../../lib/prisma"; 
 import { mapWiseStatus } from "../../../../lib/wiseStatus";
 
 export const runtime = "nodejs";
@@ -15,8 +15,7 @@ export async function GET(_req: Request, { params }: Params) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
-  // 1️⃣ Buscar en DB
-  // Usamos 'any' aquí para evitar conflictos de tipos estrictos
+  // 1️⃣ Buscar en DB (usamos 'any' para flexibilidad de tipos)
   let tx: any = await prisma.transaction.findFirst({
     where: {
       OR: [
@@ -30,7 +29,36 @@ export async function GET(_req: Request, { params }: Params) {
     },
   });
 
-  // 2️⃣ SI NO EXISTE → CONSULTAR WISE EN TIEMPO REAL
+  // 🚨 AUTO-CORRECCIÓN: Si existe pero no tiene nombre, consultamos a Wise para arreglarlo
+  if (tx && !tx.recipientName) {
+    try {
+      const res = await fetch(
+        `https://api.wise.com/v1/transfers/${tx.publicId}`, // Usamos el ID real guardado
+        {
+          headers: { Authorization: `Bearer ${process.env.WISE_API_TOKEN}` },
+        }
+      );
+      
+      if (res.ok) {
+        const wiseData = await res.json();
+        const realName = wiseData.details?.accountHolderName || wiseData.targetAccount?.accountHolderName || "Beneficiario";
+        
+        // Actualizamos la DB
+        tx = await prisma.transaction.update({
+          where: { id: tx.id },
+          data: { recipientName: realName } as any, // 'as any' para evitar error de tipos
+          include: {
+            events: { orderBy: { occurredAt: "asc" } },
+            documents: true,
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error auto-healing recipient name:", error);
+    }
+  }
+
+  // 2️⃣ SI NO EXISTE → CONSULTAR WISE Y CREAR
   if (!tx) {
     const res = await fetch(
       `https://api.wise.com/v1/transfers/${publicId}`,
@@ -51,11 +79,9 @@ export async function GET(_req: Request, { params }: Params) {
     const wise = await res.json();
     const mapped = mapWiseStatus(wise.status);
 
-    const recipientNameVal = wise.details?.accountHolderName || wise.targetAccount?.accountHolderName || "Beneficiary";
+    const recipientNameVal = wise.details?.accountHolderName || wise.targetAccount?.accountHolderName || "Beneficiario";
 
-    // 3️⃣ GUARDAR EN DB
-    // FIX: Agregamos 'as any' al objeto data para que TypeScript no bloquee el build
-    // si no ha detectado la actualización de prisma client todavía.
+    // GUARDAR EN DB
     tx = await prisma.transaction.create({
       data: {
         publicId: wise.id.toString(),
@@ -72,7 +98,7 @@ export async function GET(_req: Request, { params }: Params) {
             occurredAt: new Date(wise.created),
           },
         },
-      } as any, 
+      } as any,
       include: {
         events: { orderBy: { occurredAt: "asc" } },
         documents: true,
@@ -80,11 +106,11 @@ export async function GET(_req: Request, { params }: Params) {
     });
   }
 
-  // 4️⃣ RESPUESTA NORMALIZADA
+  // 4️⃣ RESPUESTA
   return NextResponse.json({
     publicId: tx.publicId,
     businessName: tx.businessName,
-    recipientName: tx.recipientName,
+    recipientName: tx.recipientName, // Ahora siempre debería tener valor
     amount: tx.amount.toString(),
     currency: tx.currency,
     status: tx.status,
