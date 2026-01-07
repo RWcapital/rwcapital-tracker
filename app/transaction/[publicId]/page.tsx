@@ -42,42 +42,41 @@ export default async function TransactionPage({
   const { publicId } = await params;
 
   /* ──────────────────────────────
-     1️⃣ LEER DESDE PRISMA (PROD SAFE)
+     1️⃣ LEER DESDE PRISMA
   ────────────────────────────── */
   const tx = await prisma.transaction.findFirst({
-  where: {
-    OR: [{ publicId }, { wiseTransferId: publicId }],
-  },
-  select: {
-    id: true,
-    publicId: true,
-    wiseTransferId: true,
-    businessName: true,
-    recipientName: true, // ✅ FORZADO
-    amount: true,
-    currency: true,
-    status: true,
-    reference: true,
-    createdAt: true,
-    updatedAt: true,
-    events: {
-      orderBy: { occurredAt: "asc" },
-      select: {
-        label: true,
-        occurredAt: true,
+    where: {
+      OR: [{ publicId }, { wiseTransferId: publicId }],
+    },
+    select: {
+      id: true,
+      publicId: true,
+      wiseTransferId: true,
+      businessName: true,
+      recipientName: true,
+      amount: true,
+      currency: true,
+      status: true,
+      reference: true,
+      createdAt: true,
+      updatedAt: true,
+      events: {
+        orderBy: { occurredAt: "asc" },
+        select: {
+          label: true,
+          occurredAt: true,
+        },
       },
     },
-  },
-});
-
+  });
 
   /* ──────────────────────────────
-     2️⃣ ESTADO DE ESPERA (NO notFound)
+     2️⃣ ESTADO DE ESPERA
   ────────────────────────────── */
   if (!tx) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F8FA]">
-        <div className="bg-white border border-[#E6E8EB] rounded-xl p-8 shadow-lg max-w-md text-center">
+        <div className="bg-white border border-[#E6E8EB] rounded-xl p-8 shadow-lg max-w-md text-center animate-fade-in">
           <h1 className="text-xl font-semibold text-[#0A0A0A] mb-2">
             Procesando transferencia
           </h1>
@@ -92,7 +91,7 @@ export default async function TransactionPage({
   }
 
   /* ──────────────────────────────
-     3️⃣ DERIVAR TIMELINE DESDE EVENTS
+     3️⃣ TIMELINE DESDE EVENTS
   ────────────────────────────── */
   const timeline: TimelineEvent[] = tx.events.map((e) => ({
     date: e.occurredAt.toISOString(),
@@ -100,7 +99,7 @@ export default async function TransactionPage({
   }));
 
   /* ──────────────────────────────
-     4️⃣ NOMBRE DEL BENEFICIARIO
+     4️⃣ NOMBRE DESTINATARIO
   ────────────────────────────── */
   const displayName =
     tx.recipientName && tx.recipientName.trim() !== ""
@@ -171,10 +170,26 @@ export default async function TransactionPage({
   ────────────────────────────── */
   return (
     <div className="min-h-screen bg-[#F7F8FA] flex justify-center px-4 py-10">
-      <div className="w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] p-8 shadow-xl">
+      <div
+        className="w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] p-8 shadow-xl animate-fade-up opacity-0"
+        style={{ animationFillMode: "forwards" }}
+      >
+        {/* LOGO */}
+        <div className="flex justify-center mb-8 animate-fade-in opacity-0" style={{ animationDelay: "100ms", animationFillMode: "forwards" }}>
+          <Image
+            src="/logo.png"   // 👉 coloca tu logo en /public/logo.png
+            alt="RW Capital"
+            width={160}
+            height={48}
+            priority
+          />
+        </div>
 
         {/* HEADER */}
-        <div className="text-center mb-10">
+        <div
+          className="text-center mb-10 animate-fade-in opacity-0"
+          style={{ animationDelay: "200ms", animationFillMode: "forwards" }}
+        >
           <span
             className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold mb-4 ${
               isGlobalCompleted
@@ -184,10 +199,10 @@ export default async function TransactionPage({
           >
             {isGlobalCompleted
               ? "Transferencia completada"
-              : "En Progreso"}
+              : "En progreso"}
           </span>
 
-          <h1 className="text-3xl font-bold text-[#0A0A0A] mb-2">
+          <h1 className="text-3xl font-bold text-[#0A0A0A] mb-2 leading-tight">
             {isGlobalCompleted ? "Enviado a" : "Enviando a"}
             <br />
             <span className="text-[#3B5BDB]">{displayName}</span>
@@ -207,7 +222,14 @@ export default async function TransactionPage({
         {/* TIMELINE */}
         <ol className="relative ml-4 border-l-2 border-[#E6E8EB]">
           {enrichedTimeline.map((e, i) => (
-            <li key={i} className="pl-8 pb-8">
+            <li
+              key={i}
+              className="pl-8 pb-8 opacity-0 animate-fade-up"
+              style={{
+                animationDelay: `${i * 120 + 300}ms`,
+                animationFillMode: "forwards",
+              }}
+            >
               <span
                 className={`absolute -left-[9px] mt-1 h-4 w-4 rounded-full ${
                   e.completed ? "bg-[#3B5BDB]" : "bg-[#E6E8EB]"
@@ -229,7 +251,10 @@ export default async function TransactionPage({
         </ol>
 
         {/* RESUMEN */}
-        <div className="mt-10 bg-[#F9FAFB] border border-[#E6E8EB] rounded-lg p-6">
+        <div
+          className="mt-10 bg-[#F9FAFB] border border-[#E6E8EB] rounded-lg p-6 animate-fade-in opacity-0"
+          style={{ animationDelay: "900ms", animationFillMode: "forwards" }}
+        >
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Beneficiario</span>
             <span className="font-semibold">{displayName}</span>
@@ -249,6 +274,21 @@ export default async function TransactionPage({
             <span className="text-gray-500">Referencia</span>
             <span>{tx.reference || "—"}</span>
           </div>
+        </div>
+
+        {/* BOTÓN PDF */}
+        <div
+          className="mt-6 text-center animate-fade-in opacity-0"
+          style={{ animationDelay: "1200ms", animationFillMode: "forwards" }}
+        >
+          <a
+            href={`/api/receipt/${tx.publicId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-[#3B5BDB] hover:text-[#2F4AC6] font-medium transition-colors text-sm"
+          >
+            Descargar comprobante en PDF
+          </a>
         </div>
       </div>
     </div>
