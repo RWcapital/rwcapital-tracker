@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { mapWiseStatus } from "../../../../lib/wiseStatus";
-import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -13,37 +12,6 @@ type RouteParams = {
     publicId: string;
   }>;
 };
-
-/* ──────────────────────────────
-   SELECT TIPADO (CLAVE DEL FIX)
-────────────────────────────── */
-const transactionSelect = Prisma.validator<Prisma.TransactionSelect>()({
-  id: true,
-  publicId: true,
-  wiseTransferId: true,
-  businessName: true,
-  recipientName: true,
-  amount: true,
-  currency: true,
-  status: true,
-  reference: true,
-  createdAt: true,
-  updatedAt: true,
-  events: {
-    orderBy: { occurredAt: "asc" },
-    select: {
-      occurredAt: true,
-      label: true,
-    },
-  },
-  documents: {
-    select: {
-      id: true,
-      type: true,
-      fileUrl: true,
-    },
-  },
-});
 
 /* ──────────────────────────────
    HELPER: DESTINATARIO DESDE WISE
@@ -66,8 +34,7 @@ async function fetchRecipientName(
 
     const data = await res.json();
     return data.accountHolderName ?? null;
-  } catch (err) {
-    console.error("fetchRecipientName error:", err);
+  } catch {
     return null;
   }
 }
@@ -93,49 +60,49 @@ export async function GET(
     );
   }
 
-  /* ──────────────────────────────
-     1️⃣ BUSCAR EN DB
-  ────────────────────────────── */
+  /* 1️⃣ BUSCAR EN DB */
   let tx = await prisma.transaction.findFirst({
     where: {
       OR: [{ publicId }, { wiseTransferId: publicId }],
     },
-    select: transactionSelect,
+    include: {
+      events: {
+        orderBy: { occurredAt: "asc" },
+      },
+      documents: true,
+    },
   });
 
-  /* ──────────────────────────────
-     2️⃣ AUTO-HEAL recipientName
-  ────────────────────────────── */
+  /* 2️⃣ AUTO-HEAL recipientName */
   if (tx && (!tx.recipientName || tx.recipientName === "Cuenta Wise")) {
-    try {
-      const res = await fetch(
-        `https://api.wise.com/v1/transfers/${tx.wiseTransferId}`,
-        { headers: { Authorization: `Bearer ${WISE_TOKEN}` } }
+    const res = await fetch(
+      `https://api.wise.com/v1/transfers/${tx.wiseTransferId}`,
+      { headers: { Authorization: `Bearer ${WISE_TOKEN}` } }
+    );
+
+    if (res.ok) {
+      const wise = await res.json();
+      const resolvedName = await fetchRecipientName(
+        wise.targetAccount ?? null,
+        WISE_TOKEN
       );
 
-      if (res.ok) {
-        const wise = await res.json();
-        const resolvedName = await fetchRecipientName(
-          wise.targetAccount ?? null,
-          WISE_TOKEN
-        );
-
-        if (resolvedName && resolvedName !== tx.recipientName) {
-          tx = await prisma.transaction.update({
-            where: { id: tx.id },
-            data: { recipientName: resolvedName },
-            select: transactionSelect,
-          });
-        }
+      if (resolvedName && resolvedName !== tx.recipientName) {
+        tx = await prisma.transaction.update({
+          where: { id: tx.id },
+          data: { recipientName: resolvedName },
+          include: {
+            events: {
+              orderBy: { occurredAt: "asc" },
+            },
+            documents: true,
+          },
+        });
       }
-    } catch (err) {
-      console.error("Auto-heal recipientName failed:", err);
     }
   }
 
-  /* ──────────────────────────────
-     3️⃣ CREAR SI NO EXISTE
-  ────────────────────────────── */
+  /* 3️⃣ CREAR SI NO EXISTE */
   if (!tx) {
     const res = await fetch(
       `https://api.wise.com/v1/transfers/${publicId}`,
@@ -152,19 +119,17 @@ export async function GET(
     const wise = await res.json();
     const mapped = mapWiseStatus(wise.status);
 
-    let recipientName = "Cuenta Wise";
     const resolved = await fetchRecipientName(
       wise.targetAccount ?? null,
       WISE_TOKEN
     );
-    if (resolved) recipientName = resolved;
 
     tx = await prisma.transaction.create({
       data: {
         publicId: wise.id.toString(),
         wiseTransferId: wise.id.toString(),
         businessName: "RW Capital Holding, Inc.",
-        recipientName,
+        recipientName: resolved ?? "Cuenta Wise",
         amount: wise.sourceValue,
         currency: wise.sourceCurrency,
         status: mapped.publicStatus,
@@ -176,24 +141,23 @@ export async function GET(
           },
         },
       },
-      select: transactionSelect,
+      include: {
+        events: {
+          orderBy: { occurredAt: "asc" },
+        },
+        documents: true,
+      },
     });
   }
 
-  /* ──────────────────────────────
-     4️⃣ RESPUESTA FINAL
-  ────────────────────────────── */
-  const finalRecipientName =
-    tx.recipientName &&
-    tx.recipientName.trim() !== "" &&
-    tx.recipientName !== "Cuenta Wise"
-      ? tx.recipientName
-      : "Cuenta Wise";
-
+  /* 4️⃣ RESPUESTA FINAL */
   return NextResponse.json({
     publicId: tx.publicId,
     businessName: tx.businessName,
-    recipientName: finalRecipientName,
+    recipientName:
+      tx.recipientName && tx.recipientName !== "Cuenta Wise"
+        ? tx.recipientName
+        : "Cuenta Wise",
     amount: tx.amount.toString(),
     currency: tx.currency,
     status: tx.status,
