@@ -3,25 +3,15 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-/* ──────────────────────────────
-   PARAMS (Next.js 15 REAL)
-────────────────────────────── */
 type RouteContext = {
-  params: Promise<{
-    publicId: string;
-  }>;
+  params: Promise<{ publicId: string }>;
 };
 
 export async function GET(
   _req: NextRequest,
   { params }: RouteContext
 ) {
-  // 🔑 CLAVE: await params
   const { publicId } = await params;
-
-  if (!publicId) {
-    return new NextResponse("Missing id", { status: 400 });
-  }
 
   const tx = await prisma.transaction.findFirst({
     where: {
@@ -50,6 +40,7 @@ export async function GET(
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+
   <title>${title}</title>
 
   <!-- Open Graph -->
@@ -58,19 +49,14 @@ export async function GET(
   <meta property="og:description" content="${description}" />
   <meta property="og:site_name" content="RW Capital Holding" />
   <meta property="og:url" content="https://track.rwcapitalholding.com/share/${publicId}" />
-  <meta property="og:image" content="https://track.rwcapitalholding.com/og/amount.png?amount=${encodeURIComponent(
-    amount
-  )}&currency=${tx.currency}" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
 
-  <!-- Twitter -->
+  <!-- Twitter / WhatsApp -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${title}" />
   <meta name="twitter:description" content="${description}" />
-  <meta name="twitter:image" content="https://track.rwcapitalholding.com/og/amount.png?amount=${encodeURIComponent(
-    amount
-  )}&currency=${tx.currency}" />
+
+  <!-- 🔑 REDIRECT REAL (LO QUE FALTABA) -->
+  <meta http-equiv="refresh" content="0;url=/transaction/${publicId}" />
 </head>
 <body>
   Redirecting…
