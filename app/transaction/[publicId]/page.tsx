@@ -2,6 +2,27 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 
 /* ──────────────────────────────
+   CONFIGURACIÓN Y HELPERS
+────────────────────────────── */
+
+// 1. Textos esperados en el Timeline visual
+const WISE_TIMELINE_STEPS = [
+  "El remitente ha creado tu transferencia",
+  "Hemos recibido los fondos", // Texto corto para facilitar coincidencia
+  "Tu dinero está en camino",
+  "El dinero se mueve",
+  "Tu dinero debería haber llegado",
+];
+
+// 2. Helper para comparar textos ignorando acentos y mayúsculas (CLAVE PARA QUE FUNCIONE)
+const normalize = (str: string) =>
+  str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+/* ──────────────────────────────
    TIPOS
 ────────────────────────────── */
 type TimelineEvent = {
@@ -11,8 +32,8 @@ type TimelineEvent = {
 
 type Transaction = {
   publicId: string;
-  businessName: string;
-  recipientName: string | null; // A veces viene null real o "null" texto
+  businessName: string; // Nombre del negocio (fallback)
+  recipientName: string | null; // Nombre real del destinatario
   amount: string;
   currency: string;
   status: string;
@@ -22,32 +43,25 @@ type Transaction = {
 };
 
 /* ──────────────────────────────
-   TIMELINE (Labels fijos)
-────────────────────────────── */
-const WISE_TIMELINE = [
-  "El remitente ha creado tu transferencia",
-  "Hemos recibido los fondos del remitente",
-  "Tu dinero está en camino",
-  "El dinero se mueve a través de la red bancaria",
-  "Tu dinero debería haber llegado a tu banco",
-];
-
-/* ──────────────────────────────
-   FETCH
+   FETCH DE DATOS
 ────────────────────────────── */
 async function getTransaction(publicId: string): Promise<Transaction | null> {
-  // Evitar caché para ver estados en tiempo real
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/transaction/${publicId}`,
-    { cache: "no-store" }
-  );
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/transaction/${publicId}`,
+      { cache: "no-store" } // Importante para ver cambios en tiempo real
+    );
 
-  if (!res.ok) return null;
-  return res.json();
+    if (!res.ok) return null;
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching transaction:", error);
+    return null;
+  }
 }
 
 /* ──────────────────────────────
-   COMPONENTE PAGE
+   COMPONENTE PRINCIPAL
 ────────────────────────────── */
 export default async function TransactionPage({
   params,
@@ -59,76 +73,82 @@ export default async function TransactionPage({
 
   if (!tx) notFound();
 
-  // ─── 1. Lógica de Beneficiario Blindada ───
-  // Si es null, undefined, "null" o string vacío, usa "Beneficiario"
-  const rawName = tx.recipientName;
-  const displayName =
-    rawName && rawName !== "null" && rawName.trim() !== ""
-      ? rawName
-      : "Beneficiario";
-
-  // ─── 2. Lógica de Estado Reforzada ───
-  const statusUpper = tx.status?.toUpperCase() || "";
+  /* ─────────────────────────────────────────────────────────────
+     LÓGICA 1: NOMBRE DEL BENEFICIARIO (Solución a "no aparece")
+  ───────────────────────────────────────────────────────────── */
+  // Prioridad: 1. Nombre Destinatario -> 2. Nombre Negocio -> 3. "Beneficiario"
+  let displayName = "Beneficiario";
   
-  // Detectar si la transacción finalizó exitosamente por STATUS o por evento final
-  const isCompleted =
-    statusUpper === "COMPLETED" ||
-    statusUpper === "SUCCESS" ||
-    statusUpper === "FUNDS_SENT" ||
-    tx.timeline.some((e) => 
-      e.label.toLowerCase().includes("llegado a tu banco") || 
-      e.label.toLowerCase().includes("completado")
-    );
+  if (tx.recipientName && tx.recipientName !== "null" && tx.recipientName.trim() !== "") {
+    displayName = tx.recipientName;
+  } else if (tx.businessName && tx.businessName !== "null") {
+    displayName = tx.businessName;
+  }
 
-  // ─── 3. Lógica del Timeline (Progreso Visual) ───
+  /* ─────────────────────────────────────────────────────────────
+     LÓGICA 2: ESTADO GLOBAL (Solución a "sale pendiente")
+  ───────────────────────────────────────────────────────────── */
+  const statusUpper = tx.status?.toUpperCase() || "";
+
+  // Lista ampliada de estados que significan "Terminado"
+  const COMPLETED_STATUSES = [
+    "COMPLETED",
+    "SUCCESS",
+    "SENT",
+    "FUNDS_SENT",
+    "OUTGOING_PAYMENT_SENT",
+  ];
+
+  // Verificamos si el status dice completado O si el timeline tiene el evento final
+  const hasFinalEvent = tx.timeline.some((e) => 
+    normalize(e.label).includes("llegado") || 
+    normalize(e.label).includes("completado")
+  );
+
+  const isGlobalCompleted = COMPLETED_STATUSES.includes(statusUpper) || hasFinalEvent;
+
+  /* ─────────────────────────────────────────────────────────────
+     LÓGICA 3: CONSTRUCCIÓN DEL TIMELINE VISUAL
+  ───────────────────────────────────────────────────────────── */
   let lastCompletedIndex = -1;
 
-  if (isCompleted) {
-    // Si está completada, pintamos TODO de azul
-    lastCompletedIndex = WISE_TIMELINE.length - 1;
+  if (isGlobalCompleted) {
+    // Si está completado globalmente, forzamos que TODO se vea azul
+    lastCompletedIndex = WISE_TIMELINE_STEPS.length - 1;
   } else {
-    // Si no, buscamos cuál es el paso más avanzado que coincide con la API
-    // Recorremos el timeline fijo y vemos si ese paso existe en la respuesta de la API
-    WISE_TIMELINE.forEach((stepLabel, index) => {
-      const stepClean = stepLabel.toLowerCase();
-      
-      const hasStep = tx.timeline.some((apiEvent) => {
-        const eventClean = apiEvent.label.toLowerCase();
-        // Coincidencia laxa (una contiene a la otra)
-        return eventClean.includes(stepClean) || stepClean.includes(eventClean);
-      });
+    // Si no, buscamos paso a paso con coincidencia flexible
+    WISE_TIMELINE_STEPS.forEach((stepLabel, index) => {
+      // Buscamos si algún evento de la API coincide parcialmente con el paso
+      const exists = tx.timeline.some((apiEvent) => 
+        normalize(apiEvent.label).includes(normalize(stepLabel)) ||
+        normalize(stepLabel).includes(normalize(apiEvent.label))
+      );
 
-      if (hasStep) {
+      if (exists) {
         lastCompletedIndex = index;
       }
     });
   }
 
-  // Fallback de fecha para pasos completados sin fecha específica
+  // Fecha por defecto (creación) para cuando falta la fecha exacta del evento
   const fallbackDate = tx.createdAt ?? new Date().toISOString();
 
-  // Construir objeto visual para renderizar
-  const enrichedTimeline = WISE_TIMELINE.map((label, index) => {
-    // Buscar evento real asociado a este paso
-    const realEvent = tx.timeline.find(
-      (e) =>
-        e.label.toLowerCase().includes(label.toLowerCase()) ||
-        label.toLowerCase().includes(e.label.toLowerCase())
+  // Mapeo final para renderizar
+  const enrichedTimeline = WISE_TIMELINE_STEPS.map((label, index) => {
+    // Buscar evento real para sacar la fecha
+    const realEvent = tx.timeline.find((e) =>
+      normalize(e.label).includes(normalize(label)) ||
+      normalize(label).includes(normalize(e.label))
     );
 
-    const isFinishedStep = index <= lastCompletedIndex;
-    
-    // Solo mostrar fecha si el paso ya ocurrió
-    let displayDate = null;
-    if (isFinishedStep) {
-      displayDate = realEvent?.date ?? fallbackDate;
-    }
+    const isStepCompleted = index <= lastCompletedIndex;
 
     return {
       label,
-      completed: isFinishedStep, // Azul
-      isCurrent: index === lastCompletedIndex && !isCompleted, // Efecto pulsante solo si es el actual y NO ha terminado todo
-      date: displayDate,
+      completed: isStepCompleted,
+      // Es el actual solo si es el último completado Y la transacción no ha terminado totalmente
+      isCurrent: index === lastCompletedIndex && !isGlobalCompleted,
+      date: isStepCompleted ? (realEvent?.date ?? fallbackDate) : null,
     };
   });
 
@@ -140,53 +160,55 @@ export default async function TransactionPage({
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-indigo-500/5 blur-[120px]" />
       </div>
 
-      {/* ─── CARD PRINCIPAL CON ANIMACIÓN DE ENTRADA ─── */}
-      <div className="relative z-10 w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] p-8 shadow-xl animate-fade-up opacity-0" style={{ animationFillMode: 'forwards' }}>
+      {/* ─── CARD PRINCIPAL ─── */}
+      <div 
+        className="relative z-10 w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] p-8 shadow-xl animate-fade-up opacity-0" 
+        style={{ animationFillMode: 'forwards' }}
+      >
         
-        {/* LOGO */}
+        {/* LOGO (Opcional, si tienes el archivo) */}
         <div className="flex justify-center mb-8">
-          <Image
-            src="/logo.png"
-            alt="Logo"
-            width={180}
-            height={50}
-            priority
-            className="h-auto w-auto" // Fix para next/image aspect ratio
-          />
+           {/* Si no tienes logo.png, comenta esta sección o usa un placeholder */}
+           {/* <Image src="/logo.png" alt="Logo" width={180} height={50} className="h-auto w-auto" /> */}
         </div>
 
         {/* HEADER */}
-        <div className="text-center mb-8">
-           <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mb-3 ${isCompleted ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-600'}`}>
-              {isCompleted ? "Transacción Exitosa" : "En Progreso"}
+        <div className="text-center mb-10">
+           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold mb-4 ${
+              isGlobalCompleted 
+                ? 'bg-blue-100 text-blue-700' 
+                : 'bg-blue-50 text-blue-700'
+           }`}>
+              {isGlobalCompleted ? "Transferencia completada" : "En Progreso"}
            </span>
-           <h1 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] leading-tight">
-             {isCompleted ? "Enviado a" : "Enviando a"} <br />
+           
+           <h1 className="text-3xl font-bold text-[#0A0A0A] tracking-tight mb-2 leading-tight">
+             {isGlobalCompleted ? "Enviado a" : "Enviando a"} <br />
              <span className="text-[#3B5BDB]">{displayName}</span>
            </h1>
-           {tx.createdAt && (
-            <p className="text-sm text-gray-500 mt-2">
-              Iniciado el {new Date(tx.createdAt).toLocaleDateString("es-ES", { day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' })}
-            </p>
-           )}
+           
+           <p className="text-gray-500 text-sm mt-2">
+             Iniciado el {new Date(tx.createdAt || Date.now()).toLocaleDateString("es-ES", { 
+               day: 'numeric', month: 'long', hour: '2-digit', minute:'2-digit' 
+             })}
+           </p>
         </div>
 
-        {/* ─── TIMELINE ANIMADO ─── */}
-        <ol className="relative ml-3 border-l-2 border-[#E6E8EB] md:ml-4 md:border-l-2 space-y-0">
+        {/* ─── TIMELINE VISUAL ─── */}
+        <ol className="relative ml-4 border-l-2 border-[#E6E8EB] space-y-0">
           {enrichedTimeline.map((e, i) => (
             <li
               key={i}
-              // AQUÍ ESTABA EL ERROR: Faltaban las clases de animación
               className="relative pl-8 pb-10 last:pb-0 opacity-0 animate-fade-up"
               style={{ 
-                animationDelay: `${i * 200 + 300}ms`, // Stagger effect (escalonado)
-                animationFillMode: 'forwards' // Mantiene el estado final (visible)
+                animationDelay: `${i * 150 + 200}ms`, 
+                animationFillMode: 'forwards' 
               }}
             >
-              {/* Línea conectora coloreada */}
+              {/* Línea Azul Conectora */}
               {i !== enrichedTimeline.length - 1 && (
                 <span
-                  className={`absolute left-[-2px] top-2 h-full w-[2px] transition-colors duration-700 delay-500 ${
+                  className={`absolute left-[-2px] top-2 h-full w-[2px] transition-colors duration-500 delay-300 ${
                     e.completed ? "bg-[#3B5BDB]" : "bg-transparent"
                   }`}
                   style={{ zIndex: 1 }}
@@ -195,23 +217,27 @@ export default async function TransactionPage({
 
               {/* Punto del Timeline */}
               <span
-                className={`absolute -left-[9px] top-1 h-5 w-5 rounded-full border-4 transition-all duration-500 z-10 ${
+                className={`absolute -left-[9px] top-1.5 h-5 w-5 rounded-full border-[3px] z-10 transition-all duration-500 ${
                   e.completed
-                    ? "bg-[#3B5BDB] border-[#3B5BDB]"
-                    : "bg-white border-[#E6E8EB]"
-                } ${e.isCurrent ? "ring-4 ring-blue-100 scale-110" : ""}`}
+                    ? "bg-[#3B5BDB] border-[#3B5BDB]" 
+                    : e.isCurrent 
+                      ? "bg-white border-[#3B5BDB] ring-4 ring-blue-100 scale-110" 
+                      : "bg-white border-[#E6E8EB]" 
+                }`}
               />
 
-              {/* Contenido del paso */}
-              <div className="flex flex-col">
+              {/* Contenido Texto */}
+              <div className="flex flex-col -mt-1">
                 <span
-                  className={`text-sm font-medium transition-colors duration-300 ${
-                    e.completed ? "text-gray-900" : "text-gray-400"
+                  className={`text-[15px] font-medium transition-colors duration-300 ${
+                    e.completed || e.isCurrent ? "text-[#0A0A0A]" : "text-gray-400"
                   }`}
                 >
                   {e.label}
                 </span>
-                <span className="text-xs text-gray-400 mt-1 h-4 block">
+                
+                {/* Fecha debajo del título */}
+                <span className="text-xs text-gray-400 mt-1 h-4 block font-medium">
                   {e.date 
                     ? new Date(e.date).toLocaleDateString("es-ES", { day: 'numeric', month: 'short' }) 
                     : ""}
@@ -221,43 +247,46 @@ export default async function TransactionPage({
           ))}
         </ol>
 
-        <div className="h-8"></div> {/* Espaciador */}
-
-        {/* ─── DETALLES ─── */}
-        <div className="bg-[#F9FAFB] border border-[#E6E8EB] rounded-lg p-6 animate-fade-in opacity-0" style={{ animationDelay: '1200ms', animationFillMode: 'forwards' }}>
+        {/* ─── RESUMEN FINAL ─── */}
+        <div 
+          className="mt-10 bg-[#F9FAFB] border border-[#E6E8EB] rounded-lg p-6 animate-fade-in opacity-0" 
+          style={{ animationDelay: '1000ms', animationFillMode: 'forwards' }}
+        >
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
             Resumen de la operación
           </h3>
 
-          <div className="space-y-4 text-sm">
-            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between items-center">
               <span className="text-gray-500">Beneficiario</span>
-              <span className="text-gray-900 font-semibold text-right">{displayName}</span>
-            </div>
-
-            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-              <span className="text-gray-500">Monto enviado</span>
-              <span className="text-gray-900 font-semibold">
-                {Number(tx.amount).toLocaleString("es-ES", { minimumFractionDigits: 2 })} {tx.currency}
-              </span>
+              <span className="text-[#0A0A0A] font-semibold">{displayName}</span>
             </div>
 
             <div className="flex justify-between items-center">
+              <span className="text-gray-500">Monto enviado</span>
+              <span className="text-[#0A0A0A] font-semibold">
+                {Number(tx.amount).toLocaleString("es-ES", { minimumFractionDigits: 2 })} {tx.currency}
+              </span>
+            </div>
+             <div className="flex justify-between items-center">
               <span className="text-gray-500">Referencia</span>
-              <span className="text-gray-900">{tx.reference || "—"}</span>
+              <span className="text-[#0A0A0A] max-w-[200px] truncate text-right">
+                {tx.reference || "—"}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* BOTÓN PDF */}
-        <div className="mt-6 text-center animate-fade-in opacity-0" style={{ animationDelay: '1400ms', animationFillMode: 'forwards' }}>
+        {/* BOTÓN DESCARGA (Opcional) */}
+        <div className="mt-6 text-center animate-fade-in opacity-0" style={{ animationDelay: '1200ms', animationFillMode: 'forwards' }}>
           <a
-            href={`/api/receipt/${tx.publicId}`}
-            className="inline-flex items-center text-[#3B5BDB] hover:text-[#2F4AC6] font-medium transition-colors text-sm"
+             href="#" // Pon aquí tu ruta de descarga real si la tienes
+             className="inline-flex items-center text-[#3B5BDB] hover:text-[#2F4AC6] font-medium transition-colors text-sm"
           >
             <span className="mr-2">📄</span> Descargar comprobante oficial
           </a>
         </div>
+
       </div>
     </div>
   );
