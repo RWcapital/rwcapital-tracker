@@ -48,18 +48,29 @@ type Transaction = {
 ────────────────────────────── */
 async function getTransaction(publicId: string): Promise<Transaction | null> {
   try {
+    const baseUrl =
+      process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000";
+
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/transaction/${publicId}`,
-      { cache: "no-store" } // Importante para ver cambios en tiempo real
+      `${baseUrl}/api/transaction/${publicId}`,
+      { cache: "no-store" }
     );
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("API ERROR:", res.status, text);
+      return null;
+    }
+
     return res.json();
   } catch (error) {
     console.error("Error fetching transaction:", error);
     return null;
   }
 }
+
 
 /* ──────────────────────────────
    COMPONENTE PRINCIPAL
