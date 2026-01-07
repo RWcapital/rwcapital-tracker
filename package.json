@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.1",
+    "@vercel/og": "^0.8.6",
     "next": "16.1.1",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
