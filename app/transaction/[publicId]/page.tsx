@@ -32,8 +32,9 @@ type TimelineEvent = {
 
 type Transaction = {
   publicId: string;
-  businessName: string; // Nombre del negocio (fallback)
-  recipientName: string | null; // Nombre real del destinatario
+  businessName: string;
+  recipientName: string | null;
+  finalRecipientName?: string | null; // 👈 NUEVO
   amount: string;
   currency: string;
   status: string;
@@ -79,14 +80,19 @@ export default async function TransactionPage({
   // Prioridad: 1. Nombre Destinatario -> 2. Nombre Negocio -> 3. "Beneficiario"
 let displayName = "Cuenta Wise";
 
-if (
+// 1️⃣ Beneficiario final real (MT103)
+if (tx.finalRecipientName && tx.finalRecipientName.trim() !== "") {
+  displayName = tx.finalRecipientName;
+
+// 2️⃣ Fallback: cuenta Wise (si es distinta al emisor)
+} else if (
   tx.recipientName &&
-  tx.recipientName !== "null" &&
   tx.recipientName.trim() !== "" &&
   tx.recipientName !== tx.businessName
 ) {
   displayName = tx.recipientName;
 }
+
 
   /* ─────────────────────────────────────────────────────────────
      LÓGICA 2: ESTADO GLOBAL (Solución a "sale pendiente")
