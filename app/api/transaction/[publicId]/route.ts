@@ -15,8 +15,9 @@ type RouteParams = {
 };
 
 /* ──────────────────────────────
-   TIPO CORRECTO CON INCLUDE (ÚNICO VÁLIDO)
+   TIPO CORRECCIÓN: Forzamos recipientName
 ────────────────────────────── */
+// Añadimos explícitamente el campo al tipo para que el compilador lo reconozca
 type TransactionWithRelations = Prisma.TransactionGetPayload<{
   include: {
     events: {
@@ -24,7 +25,9 @@ type TransactionWithRelations = Prisma.TransactionGetPayload<{
     };
     documents: true;
   };
-}>;
+}> & { 
+  recipientName: string | null; // Forzamos que TypeScript sepa que este campo existe
+};
 
 /* ──────────────────────────────
    HELPER: DESTINATARIO DESDE WISE
@@ -76,18 +79,17 @@ export async function GET(
   /* ──────────────────────────────
      1️⃣ BUSCAR EN DB
   ────────────────────────────── */
-  let tx: TransactionWithRelations | null =
-    await prisma.transaction.findFirst({
-      where: {
-        OR: [{ publicId }, { wiseTransferId: publicId }],
+  let tx = await prisma.transaction.findFirst({
+    where: {
+      OR: [{ publicId }, { wiseTransferId: publicId }],
+    },
+    include: {
+      events: {
+        orderBy: { occurredAt: "asc" },
       },
-      include: {
-        events: {
-          orderBy: { occurredAt: "asc" },
-        },
-        documents: true,
-      },
-    });
+      documents: true,
+    },
+  }) as TransactionWithRelations | null; // Cast explícito
 
   /* ──────────────────────────────
      2️⃣ AUTO-HEAL recipientName
@@ -105,7 +107,10 @@ export async function GET(
         WISE_TOKEN
       );
 
-      if (resolvedName && resolvedName !== tx.recipientName) {
+      // Usamos cast aquí también para evitar el error de acceso
+      const currentName = (tx as any).recipientName;
+
+      if (resolvedName && resolvedName !== currentName) {
         tx = await prisma.transaction.update({
           where: { id: tx.id },
           data: { recipientName: resolvedName },
@@ -115,7 +120,7 @@ export async function GET(
             },
             documents: true,
           },
-        });
+        }) as TransactionWithRelations;
       }
     }
   }
@@ -167,18 +172,21 @@ export async function GET(
         },
         documents: true,
       },
-    });
+    }) as TransactionWithRelations;
   }
 
   /* ──────────────────────────────
      4️⃣ RESPUESTA FINAL
   ────────────────────────────── */
+  // Acceso seguro mediante casting para el compilador
+  const finalName = (tx as any).recipientName;
+
   return NextResponse.json({
     publicId: tx.publicId,
     businessName: tx.businessName,
     recipientName:
-      tx.recipientName && tx.recipientName !== "Cuenta Wise"
-        ? tx.recipientName
+      finalName && finalName !== "Cuenta Wise"
+        ? finalName
         : "Cuenta Wise",
     amount: tx.amount.toString(),
     currency: tx.currency,
@@ -187,7 +195,7 @@ export async function GET(
     wiseTransferId: tx.wiseTransferId,
     createdAt: tx.createdAt.toISOString(),
     updatedAt: tx.updatedAt.toISOString(),
-    timeline: tx.events.map((e: { occurredAt: Date; label: string }) => ({
+    timeline: tx.events.map((e) => ({
       date: e.occurredAt.toISOString(),
       label: e.label,
     })),
