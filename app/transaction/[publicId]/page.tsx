@@ -2,19 +2,62 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { publicId: string };
-}): Promise<Metadata> {
+export async function generateMetadata(
+  { params }: { params: { publicId: string } }
+): Promise<Metadata> {
+
+  const tx = await prisma.transaction.findFirst({
+    where: {
+      OR: [
+        { publicId: params.publicId },
+        { wiseTransferId: params.publicId },
+      ],
+    },
+    select: {
+      amount: true,
+      currency: true,
+      businessName: true,
+      recipientName: true,
+    },
+  });
+
+  if (!tx) {
+    return {
+      title: "Seguimiento de transferencia",
+      description: "Estado de la transferencia",
+    };
+  }
+
+  const amount = Number(tx.amount).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+  });
+
+  const title = `${amount} ${tx.currency}`;
+  const description = `Arriving from ${tx.businessName}`;
+
   return {
+    title,
+    description,
     openGraph: {
+      title,
+      description,
+      url: `https://track.rwcapitalholding.com/transaction/${params.publicId}`,
+      siteName: "RWC Capital",
       images: [
         {
-          url: `/transaction/${params.publicId}/opengraph-image`,
+          url: `https://track.rwcapitalholding.com/api/og/transaction/${params.publicId}`,
           width: 1200,
           height: 630,
         },
+      ],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [
+        `https://track.rwcapitalholding.com/api/og/transaction/${params.publicId}`,
       ],
     },
   };
