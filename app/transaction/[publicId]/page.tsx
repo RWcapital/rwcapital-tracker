@@ -11,8 +11,8 @@ type TimelineEvent = {
 
 type Transaction = {
   publicId: string;
-  businessName: string;      // QUIÉN ENVÍA (RW Capital)
-  recipientName: string;     // QUIÉN RECIBE
+  businessName: string;
+  recipientName: string;
   amount: string;
   currency: string;
   status: string;
@@ -39,10 +39,11 @@ const WISE_TIMELINE = [
 async function getTransaction(
   publicId: string
 ): Promise<Transaction | null> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/transaction/${publicId}`,
-    { cache: "no-store" }
-  );
+ const res = await fetch(
+  `${process.env.NEXT_BASE_URL ?? ""}/api/transaction/${publicId}`,
+  { cache: "no-store" }
+);
+
 
   if (!res.ok) return null;
   return res.json();
@@ -107,44 +108,44 @@ export default async function TransactionPage({
   );
 
   return (
-    <div className="min-h-screen bg-animated-dark flex justify-center px-4 py-12">
-      {/* Glow de fondo */}
+    <div className="min-h-screen bg-fintech-light flex justify-center px-4 py-12 relative overflow-hidden">
+      {/* Fondo suave estilo Mercury */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-yellow-500/10 blur-[120px]" />
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-indigo-500/10 blur-[180px]" />
+        <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-blue-400/10 blur-[160px]" />
       </div>
 
-      <div className="relative w-full max-w-xl bg-neutral-900/95 backdrop-blur rounded-2xl border border-neutral-800 p-8 shadow-2xl">
-
+      <div className="relative w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
         {/* LOGO */}
         <div className="flex justify-center mb-8">
           <Image
             src="/logo.png"
             alt="RW Capital Holding"
-            width={220}
-            height={80}
+            width={200}
+            height={60}
             priority
           />
         </div>
 
         {/* HEADER */}
-        <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-3">
+        <h1 className="text-[22px] font-semibold leading-tight mb-3 text-[#0A0A0A]">
           {isCompleted
-            ? "Transferencia completada,"
-            : "Estamos procesando tu transferencia,"}
+            ? "Transfer completed"
+            : "Transfer in progress"}
         </h1>
 
         {/* FROM / TO */}
-        <div className="mb-6 space-y-1 text-sm">
-          <div className="text-neutral-400">
-            De:{" "}
-            <span className="text-white font-medium">
+        <div className="mb-6 space-y-1 text-[14px]">
+          <div className="text-[#5F6368]">
+            From:{" "}
+            <span className="text-[#0A0A0A] font-medium">
               {tx.businessName}
             </span>
           </div>
 
-          <div className="text-neutral-400">
-            Para:{" "}
-            <span className="text-white font-semibold uppercase">
+          <div className="text-[#5F6368]">
+            To:{" "}
+            <span className="text-[#0A0A0A] font-semibold uppercase">
               {tx.recipientName || "—"}
             </span>
           </div>
@@ -152,15 +153,15 @@ export default async function TransactionPage({
 
         {/* FECHA */}
         {tx.createdAt && (
-          <p className="text-xs text-neutral-500 mb-6">
-            {new Date(tx.createdAt).toLocaleString("es-ES", {
-              dateStyle: "full",
+          <p className="text-[13px] text-[#8A8F98] mb-6">
+            {new Date(tx.createdAt).toLocaleString("en-US", {
+              dateStyle: "long",
               timeStyle: "short",
             })}
           </p>
         )}
 
-        {/* TIMELINE */}
+        {/* TIMELINE (MISMA LÓGICA) */}
         <ol className="relative ml-2 mb-10">
           {enrichedTimeline.map((e, i) => (
             <li
@@ -172,8 +173,8 @@ export default async function TransactionPage({
                 <span
                   className={`absolute left-[6px] top-4 h-full w-px ${
                     e.completed
-                      ? "bg-yellow-500"
-                      : "bg-neutral-700"
+                      ? "bg-[#3B5BDB]"
+                      : "bg-[#E6E8EB]"
                   }`}
                 />
               )}
@@ -181,29 +182,29 @@ export default async function TransactionPage({
               <span
                 className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
                   e.completed
-                    ? "bg-yellow-500 border-yellow-500"
-                    : "bg-neutral-900 border-neutral-600"
+                    ? "bg-[#3B5BDB] border-[#3B5BDB]"
+                    : "bg-white border-[#CBD5E1]"
                 } ${
                   e.isCurrent
-                    ? "ring-4 ring-yellow-500/30"
+                    ? "ring-4 ring-[#3B5BDB]/20"
                     : ""
                 }`}
               />
 
-              <p className="text-xs text-neutral-400">
+              <p className="text-[12px] text-[#8A8F98]">
                 {e.date
-                  ? new Date(e.date).toLocaleString("es-ES", {
+                  ? new Date(e.date).toLocaleString("en-US", {
                       dateStyle: "short",
                       timeStyle: "short",
                     })
-                  : "Pendiente"}
+                  : "Pending"}
               </p>
 
               <p
-                className={`text-sm ${
+                className={`text-[14px] ${
                   e.completed
-                    ? "text-white"
-                    : "text-neutral-500"
+                    ? "text-[#0A0A0A]"
+                    : "text-[#6B7280]"
                 }`}
               >
                 {e.label}
@@ -212,16 +213,16 @@ export default async function TransactionPage({
           ))}
         </ol>
 
-        {/* DETAILS */}
-        <div className="border border-yellow-500/30 rounded-xl p-5 mb-6">
-          <h3 className="text-yellow-400 font-semibold mb-4">
-            Detalles de la transferencia
+        {/* DETAILS (MISMO CONTENIDO) */}
+        <div className="border border-[#E6E8EB] rounded-lg p-5 mb-6 bg-[#F7F8FA]">
+          <h3 className="text-[#3B5BDB] font-semibold mb-4">
+            Transfer details
           </h3>
 
-          <div className="space-y-3 text-sm">
+          <div className="space-y-3 text-[14px]">
             <div>
-              <span className="text-neutral-400 block">Monto</span>
-              <span className="text-lg font-semibold">
+              <span className="text-[#5F6368] block">Amount</span>
+              <span className="text-[18px] font-semibold text-[#0A0A0A]">
                 {Number(tx.amount).toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                 })}{" "}
@@ -230,10 +231,10 @@ export default async function TransactionPage({
             </div>
 
             <div>
-              <span className="text-neutral-400 block">
-                Referencia
+              <span className="text-[#5F6368] block">
+                Reference
               </span>
-              <span>
+              <span className="text-[#0A0A0A]">
                 {tx.reference && tx.reference.trim() !== ""
                   ? tx.reference
                   : "—"}
@@ -242,18 +243,18 @@ export default async function TransactionPage({
           </div>
         </div>
 
-        {/* PDF */}
+        {/* PDF (MISMO BOTÓN) */}
         <a
           href={`/api/receipt/${tx.publicId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full text-center bg-yellow-500 hover:bg-yellow-400 text-black font-medium py-2 rounded-lg transition"
+          className="block w-full text-center bg-[#3B5BDB] hover:bg-[#2F4AC6] text-white font-medium py-2 rounded-md transition"
         >
-          Descargar comprobante (PDF)
+          Download receipt (PDF)
         </a>
 
         {/* FOOTER */}
-        <div className="mt-8 text-xs text-neutral-500 text-center">
+        <div className="mt-8 text-[12px] text-[#8A8F98] text-center">
           RW Capital Holding · Secure Transaction Tracker
         </div>
       </div>
