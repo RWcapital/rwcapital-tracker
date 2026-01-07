@@ -83,7 +83,22 @@ export default async function TransactionPage({
   const { publicId } = await params;
   const tx = await getTransaction(publicId);
 
-  if (!tx) notFound();
+ if (!tx) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F8FA]">
+      <div className="bg-white border border-[#E6E8EB] rounded-xl p-8 shadow-lg max-w-md text-center">
+        <h1 className="text-xl font-semibold text-[#0A0A0A] mb-2">
+          Procesando transferencia
+        </h1>
+        <p className="text-gray-500 text-sm">
+          Estamos verificando el estado de la operación.  
+          Vuelve a intentar en unos minutos.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 
   /* ─────────────────────────────────────────────────────────────
      LÓGICA 1: NOMBRE DEL BENEFICIARIO (Solución a "no aparece")
