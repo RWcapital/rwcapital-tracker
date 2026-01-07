@@ -74,7 +74,7 @@ async function fetchRecipientName(
    ROUTE
 ────────────────────────────── */
 export async function GET(_req: Request, { params }: RouteParams) {
-  const { publicId } = await params; // Corregido: Se agrega el await
+  const { publicId } = await params; // Se agrega await aquí
 
   if (!publicId) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
