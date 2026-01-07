@@ -111,47 +111,48 @@ export default async function TransactionPage({
   );
 
   return (
-    <div className="min-h-screen bg-fintech flex justify-center px-4 py-10 relative overflow-hidden">
-      {/* Glow ambiental */}
-      <div className="absolute inset-0 flex justify-center pointer-events-none">
-        <div className="w-[520px] h-[520px] mt-40 bg-yellow-500/10 blur-[160px] animate-pulse" />
+    <div className="min-h-screen bg-fintech-light flex justify-center px-4 py-12 relative overflow-hidden">
+      {/* Fondo animado suave */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-indigo-500/10 blur-[180px]" />
+        <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-blue-400/10 blur-[160px]" />
       </div>
 
-      {/* Card */}
-      <div className="relative z-10 w-full max-w-xl bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-neutral-700/50 shadow-[0_20px_60px_rgba(0,0,0,0.6)] p-8 animate-fade-in">
+      {/* Card principal */}
+      <div className="relative z-10 w-full max-w-xl bg-white rounded-xl border border-[#E6E8EB] shadow-[0_20px_60px_rgba(15,23,42,0.08)] p-8 animate-fade-in-slow">
         {/* LOGO */}
         <div className="flex justify-center mb-8">
           <Image
             src="/logo.png"
             alt="RW Capital Holding"
-            width={220}
-            height={80}
+            width={200}
+            height={60}
             priority
           />
         </div>
 
         {/* HEADER */}
-        <h1 className="text-2xl md:text-3xl font-semibold leading-tight mb-2 text-white">
+        <h1 className="text-[22px] font-semibold text-[#0A0A0A] leading-tight mb-2">
           {isCompleted
-            ? "Ya está todo listo,"
-            : "Estamos procesando tu transferencia,"}
+            ? "Transfer completed"
+            : "Transfer in progress"}
           <br />
-          <span className="font-bold uppercase">
+          <span className="font-medium text-[#3B5BDB]">
             {tx.recipientName}
           </span>
         </h1>
 
         {tx.createdAt && (
-          <p className="text-sm text-neutral-400 mb-6">
-            {new Date(tx.createdAt).toLocaleString("es-ES", {
-              dateStyle: "full",
+          <p className="text-[13px] text-[#5F6368] mb-6">
+            {new Date(tx.createdAt).toLocaleString("en-US", {
+              dateStyle: "long",
               timeStyle: "short",
             })}
           </p>
         )}
 
         {/* TIMELINE */}
-        <ol className="relative ml-2 mb-8">
+        <ol className="relative ml-2">
           {enrichedTimeline.map((e, i) => (
             <li
               key={i}
@@ -163,8 +164,8 @@ export default async function TransactionPage({
                 <span
                   className={`absolute left-[6px] top-4 h-full w-px ${
                     e.completed
-                      ? "bg-yellow-500"
-                      : "bg-neutral-700"
+                      ? "bg-[#3B5BDB]"
+                      : "bg-[#E6E8EB]"
                   }`}
                 />
               )}
@@ -173,29 +174,29 @@ export default async function TransactionPage({
               <span
                 className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${
                   e.completed
-                    ? "bg-yellow-500 border-yellow-500"
-                    : "bg-neutral-900 border-neutral-600"
+                    ? "bg-[#3B5BDB] border-[#3B5BDB]"
+                    : "bg-white border-[#CBD5E1]"
                 } ${
                   e.isCurrent
-                    ? "ring-4 ring-yellow-500/30"
+                    ? "ring-4 ring-[#3B5BDB]/20"
                     : ""
                 }`}
               />
 
-              <p className="text-xs text-neutral-400">
+              <p className="text-[12px] text-[#8A8F98]">
                 {e.date
-                  ? new Date(e.date).toLocaleString("es-ES", {
-                      dateStyle: "full",
+                  ? new Date(e.date).toLocaleString("en-US", {
+                      dateStyle: "long",
                       timeStyle: "short",
                     })
-                  : "Pendiente"}
+                  : "Pending"}
               </p>
 
               <p
-                className={`text-sm ${
+                className={`text-[14px] ${
                   e.completed
-                    ? "text-white"
-                    : "text-neutral-500"
+                    ? "text-[#0A0A0A]"
+                    : "text-[#6B7280]"
                 }`}
               >
                 {e.label}
@@ -205,8 +206,8 @@ export default async function TransactionPage({
         </ol>
 
         {/* FOOTER */}
-        <div className="mt-6 text-xs text-neutral-500 text-center">
-          RW Capital Holding · Transaction Tracker
+        <div className="mt-6 text-[12px] text-[#8A8F98] text-center">
+          RW Capital Holding · Transaction tracker
         </div>
       </div>
     </div>
