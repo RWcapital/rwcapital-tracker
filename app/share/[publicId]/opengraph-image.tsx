@@ -1,11 +1,7 @@
 import { ImageResponse } from "next/og";
-import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
-export const size = {
-  width: 1200,
-  height: 630,
-};
+export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function OpenGraphImage({
@@ -13,24 +9,15 @@ export default async function OpenGraphImage({
 }: {
   params: { publicId: string };
 }) {
-  const publicId = String(params.publicId);
+  const publicId = params.publicId;
 
-  const tx = await prisma.transaction.findFirst({
-    where: {
-      OR: [
-        { publicId },
-        { wiseTransferId: publicId },
-      ],
-    },
-    select: {
-      amount: true,
-      currency: true,
-      recipientName: true,
-      businessName: true,
-    },
-  });
+  // ✅ USAR TU API EXISTENTE (CLAVE)
+  const res = await fetch(
+    `https://track.rwcapitalholding.com/api/transaction/${publicId}`,
+    { cache: "no-store" }
+  );
 
-  if (!tx) {
+  if (!res.ok) {
     return new ImageResponse(
       (
         <div
@@ -53,19 +40,12 @@ export default async function OpenGraphImage({
     );
   }
 
-  const amount =
-    typeof tx.amount === "string"
-      ? Number(tx.amount)
-      : Number(tx.amount.toString());
+  const tx = await res.json();
 
+  const amount = Number(tx.amount);
   const formattedAmount = amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
   });
-
-  const recipient =
-    tx.recipientName && tx.recipientName.trim() !== ""
-      ? tx.recipientName
-      : "Recipient";
 
   return new ImageResponse(
     (
@@ -87,12 +67,8 @@ export default async function OpenGraphImage({
             borderRadius: 28,
             padding: "80px 90px",
             boxShadow: "0 20px 40px rgba(0,0,0,0.08)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
           }}
         >
-          {/* LOGO / BRAND */}
           <div
             style={{
               fontSize: 28,
@@ -104,35 +80,27 @@ export default async function OpenGraphImage({
             RW Capital
           </div>
 
-          {/* AMOUNT (ESTILO WISE) */}
+          {/* MONTO GRANDE ESTILO WISE */}
           <div
             style={{
               fontSize: 96,
               fontWeight: 800,
               color: "#0A0A0A",
               lineHeight: 1.1,
-              marginBottom: 24,
               letterSpacing: "-2px",
             }}
           >
             {formattedAmount}{" "}
-            <span
-              style={{
-                fontSize: 48,
-                fontWeight: 700,
-                color: "#374151",
-              }}
-            >
+            <span style={{ fontSize: 48, fontWeight: 700 }}>
               {tx.currency}
             </span>
           </div>
 
-          {/* SUBTEXT */}
           <div
             style={{
+              marginTop: 24,
               fontSize: 28,
               color: "#6B7280",
-              marginBottom: 12,
             }}
           >
             Transfer sent to
@@ -143,9 +111,10 @@ export default async function OpenGraphImage({
               fontSize: 36,
               fontWeight: 600,
               color: "#1F2937",
+              marginTop: 6,
             }}
           >
-            {recipient}
+            {tx.recipientName}
           </div>
         </div>
       </div>
