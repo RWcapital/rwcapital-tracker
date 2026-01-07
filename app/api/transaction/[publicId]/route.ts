@@ -8,13 +8,15 @@ export const runtime = "nodejs";
 /* ──────────────────────────────
    TIPOS
 ────────────────────────────── */
+
+// CORRECCIÓN: En Next.js 15+, params es una Promise
 type RouteParams = {
-  params: {
+  params: Promise<{
     publicId: string;
-  };
+  }>;
 };
 
-
+// Se agregó 'orderBy' en la definición del tipo para que coincida con la consulta
 type TransactionWithRelations = Prisma.TransactionGetPayload<{
   select: {
     id: true;
@@ -29,6 +31,7 @@ type TransactionWithRelations = Prisma.TransactionGetPayload<{
     createdAt: true;
     updatedAt: true;
     events: {
+      orderBy: { occurredAt: "asc" }; // Indispensable para que TypeScript no falle
       select: {
         occurredAt: true;
         label: true;
@@ -36,9 +39,9 @@ type TransactionWithRelations = Prisma.TransactionGetPayload<{
     };
     documents: {
       select: {
-        id: true;
-        type: true;
-        fileUrl: true;
+        id: true,
+        type: true,
+        fileUrl: true,
       };
     };
   };
@@ -76,10 +79,10 @@ async function fetchRecipientName(
 ────────────────────────────── */
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { publicId: string } }
+  { params }: RouteParams // Usamos el tipo corregido aquí
 ) {
-  const { publicId } = params;
- // Se agrega await aquí
+  // CORRECCIÓN: Se debe usar await para obtener los params
+  const { publicId } = await params;
 
   if (!publicId) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
@@ -90,39 +93,38 @@ export async function GET(
   /* ──────────────────────────────
      1️⃣ BUSCAR EN DB
   ────────────────────────────── */
-  let tx: TransactionWithRelations | null =
-    await prisma.transaction.findFirst({
-      where: {
-        OR: [{ publicId }, { wiseTransferId: publicId }],
-      },
-      select: {
-        id: true,
-        publicId: true,
-        wiseTransferId: true,
-        businessName: true,
-        recipientName: true,
-        amount: true,
-        currency: true,
-        status: true,
-        reference: true,
-        createdAt: true,
-        updatedAt: true,
-        events: {
-          orderBy: { occurredAt: "asc" },
-          select: {
-            occurredAt: true,
-            label: true,
-          },
-        },
-        documents: {
-          select: {
-            id: true,
-            type: true,
-            fileUrl: true,
-          },
+  let tx = await prisma.transaction.findFirst({
+    where: {
+      OR: [{ publicId }, { wiseTransferId: publicId }],
+    },
+    select: {
+      id: true,
+      publicId: true,
+      wiseTransferId: true,
+      businessName: true,
+      recipientName: true,
+      amount: true,
+      currency: true,
+      status: true,
+      reference: true,
+      createdAt: true,
+      updatedAt: true,
+      events: {
+        orderBy: { occurredAt: "asc" },
+        select: {
+          occurredAt: true,
+          label: true,
         },
       },
-    });
+      documents: {
+        select: {
+          id: true,
+          type: true,
+          fileUrl: true,
+        },
+      },
+    },
+  }) as TransactionWithRelations | null; // Cast para asegurar compatibilidad
 
   /* ──────────────────────────────
      2️⃣ AUTO-HEAL recipientName
@@ -172,7 +174,7 @@ export async function GET(
                 },
               },
             },
-          });
+          }) as TransactionWithRelations;
         }
       }
     } catch (err) {
@@ -250,7 +252,7 @@ export async function GET(
           },
         },
       },
-    });
+    }) as TransactionWithRelations;
   }
 
   /* ──────────────────────────────
