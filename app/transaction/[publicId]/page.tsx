@@ -278,12 +278,12 @@ export default async function TransactionPage({
         </div>
 
         {/* BOTÓN DESCARGA (Opcional) */}
-        <div className="mt-6 text-center animate-fade-in opacity-0" style={{ animationDelay: '1200ms', animationFillMode: 'forwards' }}>
+        <div className="mt-6 text-center animate-fade-in opacity-0" style={{ animationDelay: '1400ms', animationFillMode: 'forwards' }}>
           <a
-             href="#" // Pon aquí tu ruta de descarga real si la tienes
-             className="inline-flex items-center text-[#3B5BDB] hover:text-[#2F4AC6] font-medium transition-colors text-sm"
+            href={`/api/receipt/${tx.publicId}`}
+            className="inline-flex items-center text-[#3B5BDB] hover:text-[#2F4AC6] font-medium transition-colors text-sm"
           >
-            <span className="mr-2">📄</span> Descargar comprobante oficial
+            <span className="mr-2"></span> Descargar comprobante oficial
           </a>
         </div>
 
