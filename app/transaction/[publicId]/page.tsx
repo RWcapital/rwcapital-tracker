@@ -203,12 +203,13 @@ export default async function TransactionPage({
       {/* Timeline — estilo Wise */}
       <ol className="relative ml-4 border-l-2 border-gray-200 transition-colors duration-700 ease-out">
         {enrichedTimeline.map((e, i) => (
-          <li
-  key={i}
-  className={`pl-8 pb-8 transition-opacity duration-700 ease-out ${
-    e.completed ? "opacity-100" : "opacity-50"
-  } ${e.isCurrent ? "wise-pulse" : ""}`}
->
+         <li
+            key={i}
+             className={`pl-8 pb-8 transition-opacity duration-700 ease-out ${
+              e.completed ? "opacity-100" : "opacity-50"
+               } ${e.isCurrent ? "animate-[wisePulse_2.8s_ease-in-out_infinite]" : ""}`}
+                >
+
 
             <span
               className={`absolute -left-[9px] mt-1 h-4 w-4 rounded-full transition-colors duration-700 ease-out ${
