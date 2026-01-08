@@ -5,10 +5,10 @@ export const runtime = "nodejs";
 
 export async function GET(
   _req: Request,
-  { params }: { params: { publicId: string } }
+  { params }: { params: Promise<{ publicId: string }> }
 ) {
   try {
-    const { publicId } = params;
+    const { publicId } = await params;
 
     // 1️⃣ Si ya existe, no hacer nada
     const existing = await prisma.transaction.findUnique({
@@ -39,30 +39,28 @@ export async function GET(
 
     const transfer = await res.json();
 
-    // 3️⃣ Crear transacción mínima
+    // 3️⃣ Crear transacción (idempotente)
     await prisma.transaction.upsert({
-  where: { publicId: transfer.id.toString() },
-  create: {
-    publicId: transfer.id.toString(),
-    wiseTransferId: transfer.id.toString(),
-    businessName: "RW Capital Holding, Inc.",
-    amount: transfer.sourceValue ?? 0,
-    currency: transfer.sourceCurrency ?? "USD",
-    status: transfer.status ?? "PROCESSING",
-    reference: transfer.reference ?? null,
-    events: {
+      where: { publicId: transfer.id.toString() },
       create: {
-        label: "Transferencia detectada automáticamente",
-        occurredAt: transfer.created
-          ? new Date(transfer.created)
-          : new Date(),
+        publicId: transfer.id.toString(),
+        wiseTransferId: transfer.id.toString(),
+        businessName: "RW Capital Holding, Inc.",
+        amount: transfer.sourceValue ?? 0,
+        currency: transfer.sourceCurrency ?? "USD",
+        status: transfer.status ?? "PROCESSING",
+        reference: transfer.reference ?? null,
+        events: {
+          create: {
+            label: "Transferencia detectada automáticamente",
+            occurredAt: transfer.created
+              ? new Date(transfer.created)
+              : new Date(),
+          },
+        },
       },
-    },
-  },
-  update: {}, // idempotente
-});
-
-
+      update: {}, // idempotente
+    });
 
     return NextResponse.json({
       ok: true,
