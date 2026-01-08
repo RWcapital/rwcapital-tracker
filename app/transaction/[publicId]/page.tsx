@@ -179,7 +179,7 @@ export default async function TransactionPage({
       </div>
 
       <div className="text-center mb-10">
-        <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 mb-4 transition-opacity duration-700 ease-out">
+        <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 mb-4">
           {isCompleted ? "Transferencia completada" : "En progreso"}
         </span>
 
@@ -200,39 +200,54 @@ export default async function TransactionPage({
         </p>
       </div>
 
-      {/* Timeline — estilo Wise */}
-      <ol className="relative ml-4 border-l-2 border-gray-200 transition-colors duration-700 ease-out">
+      {/* Timeline — PRO (restaurado) */}
+      <ol className="relative ml-4 border-l-2 border-gray-200">
         {enrichedTimeline.map((e, i) => (
-         <li
+          <li
             key={i}
-             className={`pl-8 pb-8 transition-opacity duration-700 ease-out ${
-              e.completed ? "opacity-100" : "opacity-50"
-               } ${e.isCurrent ? "animate-[wisePulse_2.8s_ease-in-out_infinite]" : ""}`}
-                >
+            className="relative pl-8 pb-8 timeline-item"
+            style={{ animationDelay: `${i * 160}ms` }}
+          >
+            {/* Línea vertical */}
+            {i !== enrichedTimeline.length - 1 && (
+              <span
+                className={`absolute left-[6px] top-4 h-full w-px ${
+                  e.completed ? "bg-[#3B5BDB]" : "bg-[#E6E8EB]"
+                }`}
+              />
+            )}
 
-
+            {/* Punto */}
             <span
-              className={`absolute -left-[9px] mt-1 h-4 w-4 rounded-full transition-colors duration-700 ease-out ${
-                e.completed ? "bg-blue-600" : "bg-gray-300"
+              className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 transition-all duration-300 ${
+                e.completed
+                  ? "bg-[#3B5BDB] border-[#3B5BDB]"
+                  : "bg-white border-[#CBD5E1]"
+              } ${
+                e.isCurrent ? "ring-4 ring-[#3B5BDB]/20" : ""
               }`}
             />
 
-            <div
-              className={`text-sm font-medium transition-colors duration-700 ease-out ${
-                e.isCurrent ? "text-gray-900" : "text-gray-700"
+            {/* Fecha */}
+            <p className="text-xs text-[#8A8F98]">
+              {e.date
+                ? new Date(e.date).toLocaleString("en-US", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })
+                : "Pending"}
+            </p>
+
+            {/* Label */}
+            <p
+              className={`text-sm ${
+                e.completed
+                  ? "text-[#0A0A0A]"
+                  : "text-[#6B7280]"
               }`}
             >
               {e.label}
-            </div>
-
-            {e.date && (
-              <div className="text-xs text-gray-400 mt-0.5">
-                {new Date(e.date).toLocaleDateString("es-ES", {
-                  day: "numeric",
-                  month: "short",
-                })}
-              </div>
-            )}
+            </p>
           </li>
         ))}
       </ol>
@@ -263,7 +278,7 @@ export default async function TransactionPage({
         <a
           href={`/api/receipt/${tx.publicId}`}
           target="_blank"
-          className="text-blue-600 text-sm font-medium transition-colors duration-300 hover:text-blue-700"
+          className="text-blue-600 text-sm font-medium hover:text-blue-700"
         >
           Descargar comprobante en PDF
         </a>
