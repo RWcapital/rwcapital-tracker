@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { mapWiseStatus } from "../../../../lib/wiseStatus";
-import { parseWiseReceipt } from "../../../../lib/wise/parseWiseReceipt";
 import { getRecipientNameFromWise } from "../../../../lib/wiseRecipient";
 
 export const runtime = "nodejs";
@@ -86,28 +85,7 @@ export async function GET() {
               },
             });
 
-            const parsed = await parseWiseReceipt(wiseId);
-            if (parsed?.finalRecipientName) {
-              await prisma.$executeRawUnsafe(`
-                UPDATE "Transaction"
-                SET
-                  "finalRecipientName" = '${parsed.finalRecipientName.replace(/'/g, "''")}',
-                  "finalRecipientSwift" = ${
-                    parsed.finalRecipientSwift
-                      ? `'${parsed.finalRecipientSwift}'`
-                      : "NULL"
-                  },
-                  "finalRecipientAddr" = ${
-                    parsed.finalRecipientAddress
-                      ? `'${parsed.finalRecipientAddress.replace(/'/g, "''")}'`
-                      : "NULL"
-                  },
-                  "updatedAt" = NOW()
-                WHERE "id" = '${row.id}'
-              `);
-            }
-
-            created++;
+            
           }
 
           continue;
