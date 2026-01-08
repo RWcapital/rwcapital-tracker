@@ -34,8 +34,7 @@ export async function generateMetadata(
     minimumFractionDigits: 2,
   });
 
-  const isCompleted =
-    mapStatusToStep(tx.status) === "COMPLETED";
+  const isCompleted = mapStatusToStep(tx.status) === "COMPLETED";
 
   const title = `${amount} ${tx.currency} · ${
     isCompleted ? "Transfer completed" : "Transfer in progress"
@@ -59,7 +58,10 @@ const CBPAY_STEPS = [
   { key: "CREATED", label: "Creaste tu transferencia" },
   { key: "FUNDS_TAKEN", label: "Hemos tomado los fondos" },
   { key: "SENT", label: "Hemos enviado tus USD" },
-  { key: "PROCESSING_BY_BANK", label: "El banco está procesando la transferencia" },
+  {
+    key: "PROCESSING_BY_BANK",
+    label: "El banco está procesando la transferencia",
+  },
   { key: "COMPLETED", label: "Transferencia completada" },
 ];
 
@@ -69,7 +71,8 @@ function mapStatusToStep(status: string) {
   if (["CREATED", "PENDING"].includes(s)) return "CREATED";
   if (["FUNDS_RECEIVED", "FUNDS_TAKEN"].includes(s)) return "FUNDS_TAKEN";
   if (["SENT", "FUNDS_SENT", "OUTGOING_PAYMENT_SENT"].includes(s)) return "SENT";
-  if (["PROCESSING", "PROCESSING_BY_BANK"].includes(s)) return "PROCESSING_BY_BANK";
+  if (["PROCESSING", "PROCESSING_BY_BANK"].includes(s))
+    return "PROCESSING_BY_BANK";
   if (["COMPLETED", "SUCCESS"].includes(s)) return "COMPLETED";
 
   return "PROCESSING_BY_BANK";
@@ -85,7 +88,8 @@ export default async function TransactionPage({
 }) {
   const { publicId } = await params;
 
-  const tx = await prisma.transaction.findFirst({
+  // 1️⃣ Primer intento normal
+  let tx = await prisma.transaction.findFirst({
     where: {
       OR: [{ publicId }, { wiseTransferId: publicId }],
     },
@@ -96,6 +100,31 @@ export default async function TransactionPage({
     },
   });
 
+  // 2️⃣ Fallback: fetch on-demand desde Wise
+  if (!tx) {
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/transaction/fetch-wise/${publicId}`,
+        { cache: "no-store" }
+      );
+    } catch {
+      // silencioso: si Wise no la tiene, no rompemos la página
+    }
+
+    // 3️⃣ Reintento después del fetch
+    tx = await prisma.transaction.findFirst({
+      where: {
+        OR: [{ publicId }, { wiseTransferId: publicId }],
+      },
+      include: {
+        events: {
+          orderBy: { occurredAt: "asc" },
+        },
+      },
+    });
+  }
+
+  // 4️⃣ Si aún no existe → fallback visual
   if (!tx) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F7F8FA]">
@@ -109,6 +138,9 @@ export default async function TransactionPage({
     );
   }
 
+  /* ──────────────────────────────
+     TIMELINE
+  ────────────────────────────── */
   const currentStepKey = mapStatusToStep(tx.status);
   const currentStepIndex = CBPAY_STEPS.findIndex(
     (s) => s.key === currentStepKey
