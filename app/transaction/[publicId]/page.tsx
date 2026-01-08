@@ -207,7 +207,7 @@ export default async function TransactionPage({
   key={i}
   className={`pl-8 pb-8 transition-opacity duration-700 ease-out ${
     e.completed ? "opacity-100" : "opacity-50"
-  } ${e.isCurrent ? "motion-safe:animate-wise-pulse" : ""}`}
+  } ${e.isCurrent ? "wise-pulse" : ""}`}
 >
 
             <span
