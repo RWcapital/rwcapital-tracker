@@ -25,11 +25,11 @@ export async function GET() {
         }
       );
 
-      if (!res.ok) throw new Error("Wise API error");
+      if (!res.ok) {
+        throw new Error("Wise API error");
+      }
 
       const transfers: any[] = await res.json();
-
-      // 🛑 no hay más resultados
       if (!transfers.length) break;
 
       for (const transfer of transfers) {
@@ -52,13 +52,9 @@ export async function GET() {
           if (resolved) recipientName = resolved;
         }
 
-        // ─────────────────────────────────────────────
-        // 🆕 CREAR TRANSACCIÓN
-        // ─────────────────────────────────────────────
+        // ── CREATE ──────────────────────────────────
         if (!existing) {
-          const [row] = await prisma.$queryRawUnsafe<
-            { id: string }[]
-          >(`
+          const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(`
             INSERT INTO "Transaction"
               ("id","publicId","wiseTransferId","businessName","recipientName",
                "amount","currency","status","reference","createdAt","updatedAt")
@@ -75,46 +71,49 @@ export async function GET() {
                NOW(),
                NOW()
               )
+            ON CONFLICT ("publicId") DO NOTHING
             RETURNING "id";
           `);
 
-          await prisma.transactionEvent.create({
-            data: {
-              transactionId: row.id,
-              label: mapped.labelES,
-              occurredAt,
-            },
-          });
+          if (rows.length) {
+            const row = rows[0];
 
-          // 🧠 Parse MT103 (opcional, pero lo mantengo)
-          const parsed = await parseWiseReceipt(wiseId);
-          if (parsed?.finalRecipientName) {
-            await prisma.$executeRawUnsafe(`
-              UPDATE "Transaction"
-              SET
-                "finalRecipientName" = '${parsed.finalRecipientName.replace(/'/g, "''")}',
-                "finalRecipientSwift" = ${
-                  parsed.finalRecipientSwift
-                    ? `'${parsed.finalRecipientSwift}'`
-                    : "NULL"
-                },
-                "finalRecipientAddr" = ${
-                  parsed.finalRecipientAddress
-                    ? `'${parsed.finalRecipientAddress.replace(/'/g, "''")}'`
-                    : "NULL"
-                },
-                "updatedAt" = NOW()
-              WHERE "id" = '${row.id}'
-            `);
+            await prisma.transactionEvent.create({
+              data: {
+                transactionId: row.id,
+                label: mapped.labelES,
+                occurredAt,
+              },
+            });
+
+            const parsed = await parseWiseReceipt(wiseId);
+            if (parsed?.finalRecipientName) {
+              await prisma.$executeRawUnsafe(`
+                UPDATE "Transaction"
+                SET
+                  "finalRecipientName" = '${parsed.finalRecipientName.replace(/'/g, "''")}',
+                  "finalRecipientSwift" = ${
+                    parsed.finalRecipientSwift
+                      ? `'${parsed.finalRecipientSwift}'`
+                      : "NULL"
+                  },
+                  "finalRecipientAddr" = ${
+                    parsed.finalRecipientAddress
+                      ? `'${parsed.finalRecipientAddress.replace(/'/g, "''")}'`
+                      : "NULL"
+                  },
+                  "updatedAt" = NOW()
+                WHERE "id" = '${row.id}'
+              `);
+            }
+
+            created++;
           }
 
-          created++;
           continue;
         }
 
-        // ─────────────────────────────────────────────
-        // 🔄 UPDATE DE ESTADO
-        // ─────────────────────────────────────────────
+        // ── UPDATE ──────────────────────────────────
         if (existing.status !== mapped.publicStatus) {
           await prisma.transaction.update({
             where: { id: existing.id },
@@ -139,11 +138,7 @@ export async function GET() {
       offset += LIMIT;
     }
 
-    return NextResponse.json({
-      ok: true,
-      created,
-      updated,
-    });
+    return NextResponse.json({ ok: true, created, updated });
   } catch (error: any) {
     console.error("RECONCILE ERROR:", error);
     return NextResponse.json(
