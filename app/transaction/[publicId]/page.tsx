@@ -173,7 +173,7 @@ export default async function TransactionPage({
   ────────────────────────────── */
   return (
   <div className="min-h-screen bg-[#F7F8FA] flex justify-center px-4 py-10">
-    <div className="w-full max-w-xl bg-white rounded-xl border p-8 shadow-xl">
+    <div className="w-full max-w-xl bg-white rounded-xl border p-8 shadow-xl animate-fade-up">
       <div className="flex justify-center mb-8">
         <Image src="/logo.png" alt="RW Capital" width={160} height={48} />
       </div>
@@ -200,14 +200,14 @@ export default async function TransactionPage({
         </p>
       </div>
 
-      {/* Timeline */}
+      {/* Timeline — estilo Wise */}
       <ol className="relative ml-4 border-l-2 border-gray-200 transition-colors duration-700 ease-out">
         {enrichedTimeline.map((e, i) => (
           <li
             key={i}
             className={`pl-8 pb-8 transition-opacity duration-700 ease-out ${
               e.completed ? "opacity-100" : "opacity-50"
-            } ${e.isCurrent ? "animate-[pulse_3s_ease-in-out_infinite]" : ""}`}
+            } ${e.isCurrent ? "animate-wise-pulse" : ""}`}
           >
             <span
               className={`absolute -left-[9px] mt-1 h-4 w-4 rounded-full transition-colors duration-700 ease-out ${
@@ -269,5 +269,6 @@ export default async function TransactionPage({
     </div>
   </div>
 );
+
 
 }

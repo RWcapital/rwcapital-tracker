@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────
-   DESIGN TOKENS — MERCURY STYLE
+   DESIGN TOKENS — MERCURY / WISE STYLE
 ───────────────────────────────────────────── */
 :root {
   /* Backgrounds */
@@ -41,11 +41,8 @@
   --font-weight-bold: 600;
   --font-weight-medium: 500;
   --font-weight-regular: 400;
-}
 
-@theme inline {
-  --color-background: var(--color-background-primary);
-  --color-foreground: var(--color-text-primary);
+  /* Font stack */
   --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont;
 }
 
@@ -62,15 +59,15 @@ body {
       #ffffff,
       #f7f8fa
     );
+
   color: var(--color-text-primary);
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont;
-  
-  /* CORRECCIÓN: Usamos las propiedades CSS reales en lugar de la clase 'antialiased' */
+  font-family: var(--font-sans);
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ───────────────── ANIMACIONES ───────────────── */
+/* ───────────────── ANIMACIONES BASE ───────────────── */
 
 /* Fade In Simple */
 @keyframes fade-in {
@@ -82,7 +79,7 @@ body {
   animation: fade-in 0.6s ease-out forwards;
 }
 
-/* Fade Up (Movimiento hacia arriba suave) */
+/* Fade Up (estilo Wise) */
 @keyframes fade-up {
   from {
     opacity: 0;
@@ -98,7 +95,7 @@ body {
   animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ───────────────── UTILIDADES EXTRA ───────────────── */
+/* ───────────────── COMPONENTES FINTECH ───────────────── */
 
 .card-fintech {
   background: var(--color-background-card);
@@ -110,8 +107,36 @@ body {
     0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
-/* Estilos de texto */
-.text-title-xl { font-size: var(--font-size-title-xl); font-weight: var(--font-weight-bold); }
-.text-title-lg { font-size: var(--font-size-title-lg); font-weight: var(--font-weight-bold); }
-.text-body { font-size: var(--font-size-body); font-weight: var(--font-weight-regular); }
-.text-small { font-size: var(--font-size-small); color: var(--color-text-muted); }
+/* Tipografía utilitaria */
+.text-title-xl {
+  font-size: var(--font-size-title-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.text-title-lg {
+  font-size: var(--font-size-title-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.text-body {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+}
+
+.text-small {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+/* ───────────────── ANIMACIÓN WISE ───────────────── */
+
+/* Pulse ultra sutil (estado actual) */
+@keyframes wise-pulse {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.65; }
+  100% { opacity: 1; }
+}
+
+.animate-wise-pulse {
+  animation: wise-pulse 3s ease-in-out infinite;
+}
