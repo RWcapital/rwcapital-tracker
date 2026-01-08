@@ -27,10 +27,6 @@ function verifySignature(rawBody: string, signature: string | null) {
 }
 
 /* ──────────────────────────────
-   ID PÚBLICO (ROBUSTO)
-────────────────────────────── */
-
-/* ──────────────────────────────
    WEBHOOK HANDLER
 ────────────────────────────── */
 export async function POST(request: NextRequest) {
@@ -48,71 +44,65 @@ export async function POST(request: NextRequest) {
     const payload = JSON.parse(rawBody);
     const { event_type, data } = payload;
 
+    const wiseId = data.transfer_id.toString();
+    const occurredAt = new Date(data.occurred_at);
+
     /* ──────────────────────────────
-       1️⃣ TRANSFER CREATED (IDEMPOTENTE)
+       1️⃣ TRANSFER CREATED
     ────────────────────────────── */
     if (event_type === "transfer.created") {
-  const wiseId = data.transfer_id.toString();
-
-  const existing = await prisma.transaction.findUnique({
-    where: { wiseTransferId: wiseId },
-  });
-
-  if (existing) {
-    return NextResponse.json({
-      ok: true,
-      idempotent: true,
-      publicId: existing.publicId,
-    });
-  }
-
-  await prisma.transaction.create({
-    data: {
-      publicId: wiseId,        // 👈 ID visible
-      wiseTransferId: wiseId,  // 👈 mismo ID
-      businessName: "RW Capital Holding, Inc.",
-      amount: data.amount.value,
-      currency: data.amount.currency,
-      status: "PENDING",
-      reference: data.reference ?? null,
-      events: {
+      await prisma.transaction.upsert({
+        where: { wiseTransferId: wiseId },
         create: {
-          label: "El remitente ha creado tu transferencia",
-          occurredAt: new Date(data.occurred_at),
+          publicId: wiseId,
+          wiseTransferId: wiseId,
+          businessName: "RW Capital Holding, Inc.",
+          amount: data.amount?.value ?? 0,
+          currency: data.amount?.currency ?? "USD",
+          status: "PENDING",
+          reference: data.reference ?? null,
+          events: {
+            create: {
+              label: "El remitente ha creado tu transferencia",
+              occurredAt,
+            },
+          },
         },
-      },
-    },
-  });
-
-  return NextResponse.json({
-    ok: true,
-    created: true,
-    publicId: wiseId,
-  });
-}
-
-    /* ──────────────────────────────
-       2️⃣ STATUS CHANGED
-    ────────────────────────────── */
-    if (event_type === "transfer.status.changed") {
-      const tx = await prisma.transaction.findUnique({
-        where: { wiseTransferId: data.transfer_id },
+        update: {}, // idempotente
       });
 
-      if (!tx) {
-        return NextResponse.json({ ok: true, ignored: true });
-      }
+      return NextResponse.json({ ok: true, upserted: true });
+    }
 
+    /* ──────────────────────────────
+       2️⃣ STATUS CHANGED (UPSERT)
+    ────────────────────────────── */
+    if (event_type === "transfer.status.changed") {
       const mapped = mapWiseStatus(data.status);
 
-      await prisma.transaction.update({
-        where: { id: tx.id },
-        data: {
+      await prisma.transaction.upsert({
+        where: { wiseTransferId: wiseId },
+        create: {
+          publicId: wiseId,
+          wiseTransferId: wiseId,
+          businessName: "RW Capital Holding, Inc.",
+          amount: data.amount?.value ?? 0,
+          currency: data.amount?.currency ?? "USD",
+          status: mapped.publicStatus,
+          reference: data.reference ?? null,
+          events: {
+            create: {
+              label: mapped.labelES,
+              occurredAt,
+            },
+          },
+        },
+        update: {
           status: mapped.publicStatus,
           events: {
             create: {
               label: mapped.labelES,
-              occurredAt: new Date(data.occurred_at),
+              occurredAt,
             },
           },
         },
@@ -120,7 +110,6 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         ok: true,
-        updated: true,
         status: mapped.publicStatus,
       });
     }
