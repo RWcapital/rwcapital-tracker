@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export async function GET(
   _req: Request,
@@ -43,7 +43,6 @@ export async function GET(
     minimumFractionDigits: 2,
   })} ${tx.currency}`;
 
-  // ✅ DESTINATARIO REAL (según tu schema actual)
   const recipient = tx.recipientName || tx.businessName;
 
   return new ImageResponse(
@@ -56,7 +55,7 @@ export async function GET(
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "80px", // WhatsApp-safe
+          padding: "80px",
           fontFamily: "Inter, system-ui",
         }}
       >
