@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(
   { params }: { params: { publicId: string } }
 ): Promise<Metadata> {
@@ -42,16 +44,17 @@ export async function generateMetadata(
       description: `Arriving to ${recipient}`,
       images: [
         {
-          url: `/transaction/${params.publicId}/og`,
+          url: `${process.env.NEXT_PUBLIC_BASE_URL}/transaction/${params.publicId}/og`,
           width: 1200,
           height: 630,
         },
       ],
+      type: "website",
     },
   };
 }
 
 export default function SharePage() {
-  // Página vacía, solo existe para el preview
+  // Página fantasma: solo para OG / WhatsApp
   return null;
 }
