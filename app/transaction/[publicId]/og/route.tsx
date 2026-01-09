@@ -1,13 +1,13 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ publicId: string }> }
+  { params }: { params: { publicId: string } }
 ) {
-  const { publicId } = await context.params;
+  const { publicId } = params;
 
   const tx = await prisma.transaction.findFirst({
     where: {
@@ -17,24 +17,20 @@ export async function GET(
 
   if (!tx) {
     return new ImageResponse(
-      (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            background: "#ffffff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 48,
-            fontWeight: 600,
-            color: "#0A0A0A",
-            fontFamily: "Inter, system-ui",
-          }}
-        >
-          Transfer not found
-        </div>
-      ),
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          background: "#FFFFFF",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 48,
+          fontWeight: 600,
+        }}
+      >
+        Transfer not found
+      </div>,
       { width: 1200, height: 630 }
     );
   }
@@ -43,7 +39,7 @@ export async function GET(
     minimumFractionDigits: 2,
   })} ${tx.currency}`;
 
-  const recipient = tx.recipientName || tx.businessName;
+  const recipient = tx.businessName;
 
   return new ImageResponse(
     (
@@ -51,50 +47,50 @@ export async function GET(
         style={{
           width: "100%",
           height: "100%",
-          background: "#FFFFFF",
+          background: "#F5F7FA",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "80px",
+          alignItems: "center",
           fontFamily: "Inter, system-ui",
+          padding: "80px",
         }}
       >
-        {/* MONTO */}
+        {/* MONTO — PROTAGONISTA */}
         <div
           style={{
-            fontSize: 112,
-            fontWeight: 700,
+            fontSize: 110,
+            fontWeight: 800,
             color: "#0A0A0A",
-            letterSpacing: "-0.025em",
+            letterSpacing: "-0.03em",
             marginBottom: 28,
           }}
         >
           {amount}
         </div>
 
-        {/* LABEL */}
+        {/* SUBLABEL */}
         <div
           style={{
-            fontSize: 22,
-            fontWeight: 600,
+            fontSize: 20,
+            fontWeight: 700,
             color: "#6B7280",
             letterSpacing: "0.14em",
             textTransform: "uppercase",
-            marginBottom: 12,
+            marginBottom: 10,
           }}
         >
           Arriving from
         </div>
 
-        {/* DESTINATARIO */}
+        {/* DESTINATARIO — MÁS PEQUEÑO (COMO WISE) */}
         <div
           style={{
-            fontSize: 40,
+            fontSize: 36,
             fontWeight: 700,
             color: "#0A0A0A",
-            lineHeight: 1.25,
-            maxWidth: "92%",
-            wordWrap: "break-word",
+            textAlign: "center",
+            maxWidth: "90%",
           }}
         >
           {recipient}
