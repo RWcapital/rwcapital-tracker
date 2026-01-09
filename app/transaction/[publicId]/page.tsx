@@ -326,7 +326,7 @@ export default async function TransactionPage({
   {/* Compartir por WhatsApp */}
   <a
   href={`https://wa.me/?text=${encodeURIComponent(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/track/${tx.publicId}`
+    `${process.env.NEXT_PUBLIC_BASE_URL}/track/${tx.publicId}-${Date.now()}`
   )}`}
   target="_blank"
   rel="noopener noreferrer"
@@ -339,10 +339,12 @@ export default async function TransactionPage({
     className="h-5 w-5"
   >
     <path d="M19.11 17.2c-.3-.15-1.77-.87-2.05-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.38-1.46-.88-.78-1.47-1.74-1.64-2.03-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.6-.92-2.2-.24-.58-.48-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.05 1.02-1.05 2.5 0 1.47 1.08 2.9 1.23 3.1.15.2 2.12 3.23 5.15 4.53z"/>
+    <path d="M16.04 2.67c-7.33 0-13.3 5.97-13.3 13.3 0 2.35.62 4.65 1.8 6.67L2.5 29.33l6.86-1.99c1.96 1.07 4.16 1.63 6.4 1.63 7.33 0 13.3-5.97 13.3-13.3 0-7.33-5.97-13.3-13.3-13.3z"/>
   </svg>
 
   Compartir por WhatsApp
 </a>
+
 
 </div>
 
