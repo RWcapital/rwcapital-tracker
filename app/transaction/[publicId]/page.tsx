@@ -320,6 +320,20 @@ export default async function TransactionPage({
             >
               Descargar comprobante en PDF
             </a>
+
+             {/* Compartir estado */}
+  <a
+    href={`https://wa.me/?text=${encodeURIComponent(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/transaction/${tx.publicId}?share=tx_${tx.publicId}`
+    )}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center gap-2 rounded-full bg-[#1F2937] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#111827] transition"
+  >
+    📤 Compartir estado de la transferencia
+  </a>
+
+
           </div>
         </div>
       </div>
