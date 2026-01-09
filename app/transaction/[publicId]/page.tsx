@@ -187,120 +187,146 @@ export default async function TransactionPage({
      RENDER
   ────────────────────────────── */
   return (
-  <div className="min-h-screen bg-[#F7F8FA] flex justify-center px-4 py-10">
-    <div className="w-full max-w-xl bg-white rounded-xl border p-8 shadow-xl animate-fade-up">
-      <div className="flex justify-center mb-8">
-        <Image src="/logo.png" alt="RW Capital" width={160} height={48} />
-      </div>
+  <div className="min-h-screen bg-[#F7F8FA] flex justify-center px-4 py-12">
+    <div className="w-full max-w-2xl">
 
-      <div className="text-center mb-10">
-        <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 mb-4">
-          {isCompleted ? "Transferencia completada" : "En progreso"}
-        </span>
+      {/* CARD PRINCIPAL */}
+      <div className="bg-white rounded-2xl border border-[#E6E8EB] shadow-sm overflow-hidden animate-fade-up">
 
-        <h1 className="text-3xl font-bold mb-2">
-          {isCompleted ? "Enviado a" : "Enviando a"}
-          <br />
-          <span className="text-blue-600">{displayName}</span>
-        </h1>
+        {/* HEADER */}
+        <div className="px-8 py-6 border-b border-[#E6E8EB] flex justify-center">
+          <Image
+            src="/logo.png"
+            alt="RW Capital"
+            width={160}
+            height={48}
+            priority
+          />
+        </div>
 
-        <p className="text-sm text-gray-500">
-          Iniciado el{" "}
-          {new Date(tx.createdAt).toLocaleDateString("es-ES", {
-            day: "numeric",
-            month: "long",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
-      </div>
+        {/* BODY */}
+        <div className="px-8 py-8">
 
-      {/* Timeline — PRO (restaurado) */}
-      <ol className="relative ml-4 border-l-2 border-gray-200">
-        {enrichedTimeline.map((e, i) => (
-          <li
-            key={i}
-            className="relative pl-8 pb-8 timeline-item"
-            style={{ animationDelay: `${i * 160}ms` }}
-          >
-            {/* Línea vertical */}
-            {i !== enrichedTimeline.length - 1 && (
-              <span
-                className={`absolute left-[6px] top-4 h-full w-px ${
-                  e.completed ? "bg-[#3B5BDB]" : "bg-[#E6E8EB]"
-                }`}
-              />
-            )}
-
-            {/* Punto */}
+          {/* STATUS */}
+          <div className="text-center mb-10">
             <span
-              className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 transition-all duration-300 ${
-                e.completed
-                  ? "bg-[#3B5BDB] border-[#3B5BDB]"
-                  : "bg-white border-[#CBD5E1]"
-              } ${
-                e.isCurrent ? "ring-4 ring-[#3B5BDB]/20" : ""
-              }`}
-            />
-
-            {/* Fecha */}
-            <p className="text-xs text-[#8A8F98]">
-              {e.date
-                ? new Date(e.date).toLocaleString("en-US", {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  })
-                : "Pending"}
-            </p>
-
-            {/* Label */}
-            <p
-              className={`text-sm ${
-                e.completed
-                  ? "text-[#0A0A0A]"
-                  : "text-[#6B7280]"
+              className={`inline-flex px-4 py-1.5 rounded-full text-xs font-semibold mb-4 ${
+                isCompleted
+                  ? "bg-green-50 text-green-700"
+                  : "bg-blue-50 text-blue-700"
               }`}
             >
-              {e.label}
+              {isCompleted ? "Transferencia completada" : "Transferencia en progreso"}
+            </span>
+
+            <h1 className="text-3xl font-semibold text-[#0A0A0A] mb-2">
+              {isCompleted ? "Enviado a" : "Enviando a"}
+            </h1>
+
+            <p className="text-xl font-medium text-[#3B5BDB]">
+              {displayName}
             </p>
-          </li>
-        ))}
-      </ol>
 
-      <div className="mt-8 bg-gray-50 border rounded-lg p-6 text-sm">
-        <div className="flex justify-between">
-          <span className="text-gray-500">Beneficiario</span>
-          <span className="font-semibold">{displayName}</span>
+            <p className="text-sm text-[#6B7280] mt-3">
+              Iniciado el{" "}
+              {new Date(tx.createdAt).toLocaleDateString("es-ES", {
+                day: "numeric",
+                month: "long",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+
+          {/* TIMELINE */}
+          <div className="mb-10">
+            <ol className="relative ml-4">
+              {enrichedTimeline.map((e, i) => (
+                <li
+                  key={i}
+                  className="relative pl-8 pb-8 timeline-item"
+                  style={{ animationDelay: `${i * 160}ms` }}
+                >
+                  {i !== enrichedTimeline.length - 1 && (
+                    <span
+                      className={`absolute left-[6px] top-4 h-full w-px ${
+                        e.completed ? "bg-[#3B5BDB]" : "bg-[#E6E8EB]"
+                      }`}
+                    />
+                  )}
+
+                  <span
+                    className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 transition-all duration-300 ${
+                      e.completed
+                        ? "bg-[#3B5BDB] border-[#3B5BDB]"
+                        : "bg-white border-[#CBD5E1]"
+                    } ${
+                      e.isCurrent ? "ring-4 ring-[#3B5BDB]/20" : ""
+                    }`}
+                  />
+
+                  <p className="text-xs text-[#8A8F98]">
+                    {e.date
+                      ? new Date(e.date).toLocaleString("en-US", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })
+                      : "Pendiente"}
+                  </p>
+
+                  <p
+                    className={`text-sm ${
+                      e.completed
+                        ? "text-[#0A0A0A]"
+                        : "text-[#6B7280]"
+                    }`}
+                  >
+                    {e.label}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          {/* DETALLES */}
+          <div className="bg-[#F9FAFB] border border-[#E6E8EB] rounded-xl p-6 text-sm space-y-3">
+            <div className="flex justify-between">
+              <span className="text-[#6B7280]">Beneficiario</span>
+              <span className="font-medium text-[#0A0A0A]">{displayName}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-[#6B7280]">Monto enviado</span>
+              <span className="font-medium text-[#0A0A0A]">
+                {Number(tx.amount).toLocaleString("es-ES", {
+                  minimumFractionDigits: 2,
+                })}{" "}
+                {tx.currency}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-[#6B7280]">Referencia</span>
+              <span className="text-[#0A0A0A]">{tx.reference || "—"}</span>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="mt-8 text-center">
+            <a
+              href={`/api/receipt/${tx.publicId}`}
+              target="_blank"
+              className="text-sm font-medium text-[#3B5BDB] hover:text-[#2F4AC6]"
+            >
+              Descargar comprobante en PDF
+            </a>
+          </div>
         </div>
-
-        <div className="flex justify-between mt-2">
-          <span className="text-gray-500">Monto enviado</span>
-          <span className="font-semibold">
-            {Number(tx.amount).toLocaleString("es-ES", {
-              minimumFractionDigits: 2,
-            })}{" "}
-            {tx.currency}
-          </span>
-        </div>
-
-        <div className="flex justify-between mt-2">
-          <span className="text-gray-500">Referencia</span>
-          <span>{tx.reference || "—"}</span>
-        </div>
-      </div>
-
-      <div className="mt-6 text-center">
-        <a
-          href={`/api/receipt/${tx.publicId}`}
-          target="_blank"
-          className="text-blue-600 text-sm font-medium hover:text-blue-700"
-        >
-          Descargar comprobante en PDF
-        </a>
       </div>
     </div>
   </div>
 );
+
 
 
 }
