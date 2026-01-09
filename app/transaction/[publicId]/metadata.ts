@@ -18,12 +18,15 @@ export async function generateMetadata(
     minimumFractionDigits: 2,
   });
 
+  // ✅ DESTINATARIO REAL (según tu schema)
+  const recipient = tx.recipientName || tx.businessName;
+
   return {
     title: `${amount} ${tx.currency}`,
-    description: `Arriving from ${tx.businessName}`,
+    description: `Arriving from ${recipient}`,
     openGraph: {
       title: `${amount} ${tx.currency}`,
-      description: `Arriving from ${tx.businessName}`,
+      description: `Arriving from ${recipient}`,
       images: [
         {
           url: `/transaction/${params.publicId}/og`,
