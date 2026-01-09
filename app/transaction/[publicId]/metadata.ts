@@ -14,19 +14,25 @@ export async function generateMetadata(
 
   if (!tx) return {};
 
-  const amount = Number(tx.amount).toLocaleString("en-US", {
+  const amount = `${Number(tx.amount).toLocaleString("en-US", {
     minimumFractionDigits: 2,
-  });
+  })} ${tx.currency}`;
 
-  // ✅ DESTINATARIO REAL (según tu schema)
+  // ✅ DESTINATARIO REAL SEGÚN TU SCHEMA
   const recipient = tx.recipientName || tx.businessName;
 
   return {
-    title: `${amount} ${tx.currency}`,
+    // 👉 WhatsApp muestra ESTO como título principal
+    title: amount,
+
+    // 👉 WhatsApp muestra ESTO debajo del título
     description: `Arriving from ${recipient}`,
+
     openGraph: {
-      title: `${amount} ${tx.currency}`,
+      // 🔑 WhatsApp prioriza estos dos campos
+      title: amount,
       description: `Arriving from ${recipient}`,
+
       images: [
         {
           url: `/transaction/${params.publicId}/og`,
