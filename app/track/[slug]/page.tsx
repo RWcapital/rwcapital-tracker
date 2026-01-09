@@ -4,32 +4,20 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-/* ──────────────────────────────
-   HELPERS
-────────────────────────────── */
-function extractPublicId(slug: string) {
-  return slug.split("-")[0];
-}
-
-/* ──────────────────────────────
-   METADATA
-────────────────────────────── */
-type MetadataProps = {
+type Props = {
   params: {
     slug: string;
   };
 };
 
 export async function generateMetadata(
-  { params }: MetadataProps
+  { params }: Props
 ): Promise<Metadata> {
-  const publicId = extractPublicId(params.slug);
-
   const tx = await prisma.transaction.findFirst({
     where: {
       OR: [
-        { publicId },
-        { wiseTransferId: publicId },
+        { publicId: params.slug },
+        { wiseTransferId: params.slug },
       ],
     },
     select: {
@@ -40,7 +28,11 @@ export async function generateMetadata(
     },
   });
 
-  if (!tx) return {};
+  if (!tx) {
+    return {
+      title: "Transfer",
+    };
+  }
 
   const amount = Number(tx.amount).toLocaleString("en-US", {
     minimumFractionDigits: 2,
@@ -57,7 +49,7 @@ export async function generateMetadata(
       description: `Arriving to ${recipient}`,
       images: [
         {
-          url: `/track/${params.slug}/og?v=${Date.now()}`,
+          url: `${process.env.NEXT_PUBLIC_BASE_URL}/track/${params.slug}/og`,
           width: 1200,
           height: 630,
         },
@@ -66,15 +58,6 @@ export async function generateMetadata(
   };
 }
 
-/* ──────────────────────────────
-   PAGE (REDIRECT HUMANO)
-────────────────────────────── */
-export default function TrackSharePage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const publicId = extractPublicId(params.slug);
-
-  redirect(`/transaction/${publicId}`);
+export default function TrackPage({ params }: Props) {
+  redirect(`/transaction/${params.slug}`);
 }
