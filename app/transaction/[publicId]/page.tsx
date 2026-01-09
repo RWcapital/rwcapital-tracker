@@ -311,20 +311,22 @@ export default async function TransactionPage({
             </div>
           </div>
 
-          {/* CTA */}
-          <div className="mt-8 text-center">
-            <a
-              href={`/api/receipt/${tx.publicId}`}
-              target="_blank"
-              className="text-sm font-medium text-[#3B5BDB] hover:text-[#2F4AC6]"
-            >
-              Descargar comprobante en PDF
-            </a>
+         {/* CTA */}
+<div className="mt-8 flex flex-col items-center gap-4 text-center">
+  {/* Descargar PDF */}
+  <a
+    href={`/api/receipt/${tx.publicId}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-sm font-medium text-[#3B5BDB] hover:text-[#2F4AC6]"
+  >
+    Descargar comprobante en PDF
+  </a>
 
-              {/* Compartir por WhatsApp */}
+  {/* Compartir por WhatsApp */}
   <a
     href={`https://wa.me/?text=${encodeURIComponent(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/transaction/${tx.publicId}?share=tx_${tx.publicId}`
+      `${process.env.NEXT_PUBLIC_BASE_URL}/transaction/${tx.publicId}?share=${tx.publicId}-${Date.now()}`
     )}`}
     target="_blank"
     rel="noopener noreferrer"
@@ -343,8 +345,9 @@ export default async function TransactionPage({
 
     Compartir por WhatsApp
   </a>
+</div>
 
-          </div>
+
         </div>
       </div>
     </div>
