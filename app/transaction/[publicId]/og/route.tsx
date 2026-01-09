@@ -1,13 +1,14 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
+import type { NextRequest } from "next/server";
 
 export const runtime = "edge";
 
 export async function GET(
-  _req: Request,
-  { params }: { params: { publicId: string } }
+  _request: NextRequest,
+  context: { params: Promise<{ publicId: string }> }
 ) {
-  const { publicId } = params;
+  const { publicId } = await context.params;
 
   const tx = await prisma.transaction.findFirst({
     where: {
@@ -27,6 +28,7 @@ export async function GET(
           justifyContent: "center",
           fontSize: 48,
           fontWeight: 600,
+          color: "#0A0A0A",
         }}
       >
         Transfer not found
@@ -56,10 +58,10 @@ export async function GET(
           padding: "80px",
         }}
       >
-        {/* MONTO — PROTAGONISTA */}
+        {/* MONTO (PROTAGONISTA) */}
         <div
           style={{
-            fontSize: 110,
+            fontSize: 112,
             fontWeight: 800,
             color: "#0A0A0A",
             letterSpacing: "-0.03em",
@@ -83,7 +85,7 @@ export async function GET(
           Arriving from
         </div>
 
-        {/* DESTINATARIO — MÁS PEQUEÑO (COMO WISE) */}
+        {/* DESTINATARIO */}
         <div
           style={{
             fontSize: 36,
