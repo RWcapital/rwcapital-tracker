@@ -57,7 +57,7 @@ export async function generateMetadata(
       description: `Arriving to ${recipient}`,
       images: [
         {
-          url: `/track/${params.slug}/og`,
+          url: `/track/${params.slug}/og?v=${Date.now()}`,
           width: 1200,
           height: 630,
         },

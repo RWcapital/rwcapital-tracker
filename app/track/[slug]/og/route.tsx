@@ -1,18 +1,24 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
 
+/* ──────────────────────────────
+   HELPERS
+────────────────────────────── */
+function extractPublicId(slug: string) {
+  return slug.split("-")[0];
+}
 
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ slug: string }> }
+  { params }: { params: { slug: string } }
 ) {
-  const { slug } = await context.params;
+  const publicId = extractPublicId(params.slug);
 
   const tx = await prisma.transaction.findFirst({
     where: {
       OR: [
-        { publicId: slug },
-        { wiseTransferId: slug },
+        { publicId },
+        { wiseTransferId: publicId },
       ],
     },
     select: {
@@ -37,6 +43,7 @@ export async function GET(
             fontWeight: 600,
             background: "#FFFFFF",
             color: "#0A0A0A",
+            fontFamily: "Inter, system-ui",
           }}
         >
           Transfer
@@ -51,9 +58,7 @@ export async function GET(
   })} ${tx.currency}`;
 
   const recipient =
-    tx.recipientName && tx.recipientName.trim() !== ""
-      ? tx.recipientName
-      : tx.businessName;
+    tx.recipientName?.trim() || tx.businessName || "Recipient";
 
   return new ImageResponse(
     (
@@ -76,16 +81,16 @@ export async function GET(
             fontWeight: 700,
             color: "#0A0A0A",
             letterSpacing: "-0.03em",
-            marginBottom: 32,
+            marginBottom: 28,
           }}
         >
           {amount}
         </div>
 
-        {/* DESTINO */}
+        {/* LABEL */}
         <div
           style={{
-            fontSize: 28,
+            fontSize: 26,
             fontWeight: 500,
             color: "#6B7280",
           }}
@@ -93,12 +98,13 @@ export async function GET(
           Arriving to
         </div>
 
+        {/* DESTINATARIO */}
         <div
           style={{
             fontSize: 42,
             fontWeight: 700,
             color: "#0A0A0A",
-            marginTop: 8,
+            marginTop: 6,
           }}
         >
           {recipient}
