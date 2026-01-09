@@ -19,7 +19,7 @@ export async function generateMetadata(
       amount: true,
       currency: true,
       businessName: true,
-      status: true,
+      recipientName: true, // ✅ IMPORTANTE
     },
   });
 
@@ -27,6 +27,10 @@ export async function generateMetadata(
     return {
       title: "Transfer in progress",
       description: "Transfer tracking",
+      openGraph: {
+        title: "Transfer in progress",
+        description: "Transfer tracking",
+      },
     };
   }
 
@@ -34,15 +38,26 @@ export async function generateMetadata(
     minimumFractionDigits: 2,
   });
 
-  const isCompleted = mapStatusToStep(tx.status) === "COMPLETED";
+  // ✅ DESTINATARIO CORRECTO
+  const recipient = tx.recipientName || tx.businessName;
 
-  const title = `${amount} ${tx.currency} · ${
-    isCompleted ? "Transfer completed" : "Transfer in progress"
-  }`;
+  const title = `${amount} ${tx.currency}`;
+  const description = `Arriving from ${recipient}`;
 
   return {
     title,
-    description: `Arriving from ${tx.businessName}`,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [
+        {
+          url: `/transaction/${params.publicId}/og`,
+          width: 1200,
+          height: 630,
+        },
+      ],
+    },
   };
 }
 
