@@ -18,21 +18,17 @@ export async function generateMetadata(
     minimumFractionDigits: 2,
   })} ${tx.currency}`;
 
-  // ✅ DESTINATARIO REAL SEGÚN TU SCHEMA
   const recipient = tx.recipientName || tx.businessName;
 
+  // 🔑 CLAVE: WhatsApp SOLO garantiza mostrar el title
+  const title = `${amount} · ${recipient}`;
+
   return {
-    // 👉 WhatsApp muestra ESTO como título principal
-    title: amount,
-
-    // 👉 WhatsApp muestra ESTO debajo del título
-    description: `Arriving from ${recipient}`,
-
+    title,
+    description: "View transfer details",
     openGraph: {
-      // 🔑 WhatsApp prioriza estos dos campos
-      title: amount,
-      description: `Arriving from ${recipient}`,
-
+      title,
+      description: "View transfer details",
       images: [
         {
           url: `/transaction/${params.publicId}/og`,
