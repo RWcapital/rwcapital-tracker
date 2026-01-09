@@ -328,7 +328,7 @@ export default async function TransactionPage({
     )}`}
     target="_blank"
     rel="noopener noreferrer"
-    className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1EBE5D] transition shadow-md"
+    className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[#1EBE5D] transition shadow-md"
   >
     {/* Icono WhatsApp */}
     <svg
