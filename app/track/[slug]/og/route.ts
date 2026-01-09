@@ -11,9 +11,10 @@ function extractPublicId(slug: string) {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { slug: string } }
+  context: { params: Promise<{ slug: string }> }
 ) {
-  const publicId = extractPublicId(params.slug);
+  const { slug } = await context.params;
+  const publicId = extractPublicId(slug);
 
   const tx = await prisma.transaction.findFirst({
     where: {
