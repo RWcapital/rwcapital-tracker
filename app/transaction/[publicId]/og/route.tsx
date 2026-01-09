@@ -46,59 +46,64 @@ export async function GET(
   })} ${tx.currency}`;
 
   return new ImageResponse(
-    (
+  (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        background: "#FFFFFF",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: "100px",
+        fontFamily: "Inter, system-ui",
+      }}
+    >
+      {/* MONTO */}
       <div
         style={{
-          width: "100%",
-          height: "100%",
-          background: "#F7F8FA",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          padding: "96px",
-          fontFamily: "Inter, system-ui",
+          fontSize: 112,            // ⬅️ MÁS GRANDE
+          fontWeight: 700,
+          color: "#0A0A0A",
+          letterSpacing: "-0.025em",
+          marginBottom: 36,
         }}
       >
-        <div
-          style={{
-            fontSize: 96,
-            fontWeight: 700,
-            color: "#0A0A0A",
-            marginBottom: 32,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          {amount}
-        </div>
-
-        <div
-          style={{
-            fontSize: 22,
-            fontWeight: 600,
-            color: "#6B7280",
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            marginBottom: 12,
-          }}
-        >
-          Arriving from
-        </div>
-
-        <div
-          style={{
-            fontSize: 36,
-            fontWeight: 700,
-            color: "#0A0A0A",
-            lineHeight: 1.2,
-          }}
-        >
-          {tx.businessName}
-        </div>
+        {amount}
       </div>
-    ),
-    {
-      width: 1200,
-      height: 630,
-    }
-  );
+
+      {/* LABEL */}
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 600,
+          color: "#6B7280",
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          marginBottom: 10,
+        }}
+      >
+        Arriving from
+      </div>
+
+      {/* DESTINATARIO */}
+      <div
+        style={{
+          fontSize: 40,             // ⬅️ DESTINATARIO CLARO Y PROTAGÓNICO
+          fontWeight: 700,
+          color: "#0A0A0A",
+          lineHeight: 1.25,
+          maxWidth: "90%",
+        }}
+      >
+        {tx.businessName}
+      </div>
+    </div>
+  ),
+  {
+    width: 1200,
+    height: 630,
+  }
+);
+
 }
