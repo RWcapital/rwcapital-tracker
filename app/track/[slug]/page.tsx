@@ -5,51 +5,49 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 type Props = {
-  params: {
-    slug: string;
-  };
+  params: Promise<{ slug: string }>; // En Next.js 15+ params es una Promesa
 };
 
 export async function generateMetadata(
-  { params }: Props
+  { params }: { params: Promise<{ slug: string }> }
 ): Promise<Metadata> {
+  const { slug } = await params;
+  
+  // Buscamos la transacción para validar que existe
   const tx = await prisma.transaction.findFirst({
     where: {
       OR: [
-        { publicId: params.slug },
-        { wiseTransferId: params.slug },
+        { publicId: slug },
+        { wiseTransferId: slug },
       ],
     },
     select: {
-      amount: true,
-      currency: true,
-      recipientName: true,
       businessName: true,
     },
   });
 
   if (!tx) {
-    return {
-      title: "Transfer",
-    };
+    return { title: "Transfer Tracking" };
   }
 
-  const amount = Number(tx.amount).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-  });
-
-  const recipient =
-    tx.recipientName?.trim() || tx.businessName || "Recipient";
+  /**
+   * DECISIÓN TÉCNICA: Cache Busting
+   * Agregamos un timestamp o versión (?v=...) para que WhatsApp 
+   * detecte una URL nueva y descargue la imagen azul corregida.
+   */
+  const v = new Date().getTime(); 
+  const ogImageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/track/${slug}/og?v=${v}`;
 
   return {
-    title: `${amount} ${tx.currency}`,
-    description: `Arriving to ${recipient}`,
+    // Usamos títulos genéricos para evitar discrepancias con el caché
+    title: "Transfer in progress",
+    description: "RW Capital Holding - Tracking System",
     openGraph: {
-      title: `${amount} ${tx.currency}`,
-      description: `Arriving to ${recipient}`,
+      title: "Transfer in progress",
+      description: "Secure transfer tracking by RW Capital",
       images: [
         {
-          url: `${process.env.NEXT_PUBLIC_BASE_URL}/track/${params.slug}/og`,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
         },
@@ -58,6 +56,9 @@ export async function generateMetadata(
   };
 }
 
-export default function TrackPage({ params }: Props) {
-  redirect(`/transaction/${params.slug}`);
+export default async function TrackPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  
+  // El humano es redirigido a la fuente de verdad inmediatamente
+  redirect(`/transaction/${slug}`);
 }
