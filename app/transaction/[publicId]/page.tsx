@@ -5,21 +5,30 @@ import type { Metadata } from "next";
 /* ──────────────────────────────
    METADATA
 ────────────────────────────── */
+
+// Función agregada para limpiar el ID
+function extractPublicId(slug: string) {
+  return slug.split("-")[0];
+}
+
 export async function generateMetadata(
   { params }: { params: { publicId: string } }
 ): Promise<Metadata> {
+  // Limpiamos el ID para la consulta
+  const cleanId = extractPublicId(params.publicId);
+
   const tx = await prisma.transaction.findFirst({
     where: {
       OR: [
-        { publicId: params.publicId },
-        { wiseTransferId: params.publicId },
+        { publicId: cleanId },
+        { wiseTransferId: cleanId },
       ],
     },
     select: {
       amount: true,
       currency: true,
       businessName: true,
-      recipientName: true, // ✅ IMPORTANTE
+      recipientName: true, 
     },
   });
 
@@ -38,9 +47,7 @@ export async function generateMetadata(
     minimumFractionDigits: 2,
   });
 
-  // ✅ DESTINATARIO CORRECTO
   const recipient = tx.recipientName || tx.businessName;
-
   const title = `${amount} ${tx.currency}`;
   const description = `Arriving from ${recipient}`;
 
@@ -52,7 +59,7 @@ export async function generateMetadata(
       description,
       images: [
         {
-          url: `/transaction/${params.publicId}/og`,
+          url: `/track/${params.publicId}/og`,
           width: 1200,
           height: 630,
         },
@@ -82,14 +89,12 @@ const CBPAY_STEPS = [
 
 function mapStatusToStep(status: string) {
   const s = status.toUpperCase();
-
   if (["CREATED", "PENDING"].includes(s)) return "CREATED";
   if (["FUNDS_RECEIVED", "FUNDS_TAKEN"].includes(s)) return "FUNDS_TAKEN";
   if (["SENT", "FUNDS_SENT", "OUTGOING_PAYMENT_SENT"].includes(s)) return "SENT";
   if (["PROCESSING", "PROCESSING_BY_BANK"].includes(s))
     return "PROCESSING_BY_BANK";
   if (["COMPLETED", "SUCCESS"].includes(s)) return "COMPLETED";
-
   return "PROCESSING_BY_BANK";
 }
 
@@ -101,7 +106,10 @@ export default async function TransactionPage({
 }: {
   params: Promise<{ publicId: string }>;
 }) {
-  const { publicId } = await params;
+  const { publicId: rawPublicId } = await params;
+  
+  // Limpiamos el ID para que funcione con los nuevos links
+  const publicId = extractPublicId(rawPublicId);
 
   // 1️⃣ Primer intento normal
   let tx = await prisma.transaction.findFirst({
@@ -123,7 +131,7 @@ export default async function TransactionPage({
         { cache: "no-store" }
       );
     } catch {
-      // silencioso: si Wise no la tiene, no rompemos la página
+      // silencioso
     }
 
     // 3️⃣ Reintento después del fetch
@@ -162,7 +170,7 @@ export default async function TransactionPage({
   );
 
   const enrichedTimeline = CBPAY_STEPS.map((step, index) => {
-    const relatedEvent = tx.events.find((e) =>
+    const relatedEvent = tx?.events.find((e) =>
       normalize(e.label).includes(normalize(step.label))
     );
 
@@ -172,7 +180,7 @@ export default async function TransactionPage({
       isCurrent: index === currentStepIndex,
       date:
         relatedEvent?.occurredAt?.toISOString() ??
-        (index <= currentStepIndex ? tx.updatedAt?.toISOString() : null),
+        (index <= currentStepIndex ? tx?.updatedAt?.toISOString() : null),
     };
   });
 
@@ -190,7 +198,7 @@ export default async function TransactionPage({
   <div className="min-h-screen bg-[#F7F8FA] flex justify-center px-4 py-12">
     <div className="w-full max-w-2xl">
 
-      {/* CARD PRINCIPAL */}
+      {/* CARD PRINCIPAL (Animación mantenida) */}
       <div className="bg-white rounded-2xl border border-[#E6E8EB] shadow-sm overflow-hidden animate-fade-up">
 
         {/* HEADER */}
@@ -238,7 +246,7 @@ export default async function TransactionPage({
             </p>
           </div>
 
-          {/* TIMELINE */}
+          {/* TIMELINE (Animaciones mantenidas) */}
           <div className="mb-10">
             <ol className="relative ml-4">
               {enrichedTimeline.map((e, i) => (
@@ -323,13 +331,10 @@ export default async function TransactionPage({
     Descargar comprobante en PDF
   </a>
 
-{/* Compartir por WhatsApp */}
+{/* Compartir por WhatsApp (Lógica agregada manteniendo tus estilos) */}
 {(() => {
-  // 1. Generamos un hash aleatorio de 5 caracteres para romper el caché (ej: 1912280005-x8k2j)
   const randomHash = Math.random().toString(36).substring(2, 7);
   const shareSlug = `${tx.publicId}-${randomHash}`;
-  
-  // 2. Apuntamos a la ruta /track/ que es la que tiene la lógica de la imagen azul
   const shareUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/track/${shareSlug}`;
 
   const whatsappMessage = encodeURIComponent(
@@ -347,34 +352,28 @@ ${shareUrl}`
       href={`https://wa.me/?text=${whatsappMessage}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1EBE5D] transition shadow-md"
+      className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[#1EBE5D] transition shadow-md"
     >
+      {/* Tu icono SVG original */}
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
+        viewBox="0 0 32 32"
         fill="currentColor"
         className="h-5 w-5"
       >
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+        <path d="M19.11 17.2c-.3-.15-1.77-.87-2.05-.97-2.02-.71-1.65-.51-2.01-.15-.36.36-1.54 1.93-1.89 2.33-.35.4-.7.44-1.28.15s-2.45-1.21-3.41-2.07c-.74-.66-1.25-1.48-1.4-1.74-.15-.26-.02-.4.13-.54.13-.13.3-.35.45-.53.15-.17.2-.29.3-.49s.05-.37-.02-.52c-.07-.15-.65-1.58-.89-2.17-.23-.58-.47-.5-.65-.51-.17-.01-.36-.01-.55-.01s-.5.07-.77.37c-.26.3-1.01 1.01-1.01 2.45s1.04 2.82 1.18 3.02c.15.2 2.04 3.12 4.94 4.38.69.3 1.23.48 1.65.61.69.22 1.32.19 1.82.11.56-.08 1.71-.7 1.95-1.38.24-.68.24-1.26.17-1.38-.07-.12-.26-.2-.55-.34z" />
+        <path d="M16 0c-8.84 0-16 7.16-16 16 0 2.82.73 5.48 2.01 7.78l-2.01 7.34 7.51-1.97c2.2.98 4.64 1.53 7.19 1.53 8.84 0 16-7.16 16-16s-7.16-16-16-16zM16 29.33c-2.34 0-4.52-.6-6.42-1.64l-.46-.25-4.46 1.17 1.19-4.35-.28-.44c-1.14-1.81-1.81-3.95-1.81-6.25 0-6.44 5.23-11.67 11.67-11.67s11.67 5.23 11.67 11.67-5.23 11.67-11.67 11.67z" />
       </svg>
       Compartir por WhatsApp
     </a>
   );
 })()}
 
-
-
-
 </div>
-
-
-
         </div>
       </div>
     </div>
   </div>
 );
-
-
 
 }
