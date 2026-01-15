@@ -5,60 +5,44 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 type Props = {
-  params: Promise<{ slug: string }>; // En Next.js 15+ params es una Promesa
+  params: Promise<{ slug: string }>; // Debe ser una Promesa
 };
 
-export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> }
-): Promise<Metadata> {
-  const { slug } = await params;
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const resolvedParams = await params; // IMPORTANTE: Esperar los params
+  const slug = resolvedParams.slug;
   
-  // Buscamos la transacción para validar que existe
-  const tx = await prisma.transaction.findFirst({
-    where: {
-      OR: [
-        { publicId: slug },
-        { wiseTransferId: slug },
-      ],
-    },
-    select: {
-      businessName: true,
-    },
-  });
-
-  if (!tx) {
-    return { title: "Transfer Tracking" };
-  }
-
-  /**
-   * DECISIÓN TÉCNICA: Cache Busting
-   * Agregamos un timestamp o versión (?v=...) para que WhatsApp 
-   * detecte una URL nueva y descargue la imagen azul corregida.
-   */
-  const v = new Date().getTime(); 
-  const ogImageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/track/${slug}/og?v=${v}`;
+  // Cache buster para engañar a WhatsApp
+  const v = new Date().getTime();
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://track.rwcapitalholding.com";
+  const ogImageUrl = `${baseUrl}/track/${slug}/og?v=${v}`;
 
   return {
-    // Usamos títulos genéricos para evitar discrepancias con el caché
     title: "Transfer in progress",
     description: "RW Capital Holding - Tracking System",
     openGraph: {
       title: "Transfer in progress",
       description: "Secure transfer tracking by RW Capital",
+      url: `${baseUrl}/track/${slug}`,
       images: [
         {
-          url: ogImageUrl,
+          url: ogImageUrl, // URL explícita con versión
           width: 1200,
           height: 630,
+          alt: "RW Capital Transfer Tracking",
         },
       ],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [ogImageUrl],
     },
   };
 }
 
-export default async function TrackPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  
-  // El humano es redirigido a la fuente de verdad inmediatamente
-  redirect(`/transaction/${slug}`);
+export default async function TrackPage({ params }: Props) {
+  const resolvedParams = await params;
+  // Redirigimos, pero Next.js ya habrá enviado los meta tags al crawler
+  redirect(`/transaction/${resolvedParams.slug}`);
 }
