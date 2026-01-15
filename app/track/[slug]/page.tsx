@@ -10,25 +10,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const baseUrl = "https://track.rwcapitalholding.com";
   
-  // Cache Buster dinámico para forzar a WhatsApp a refrescar
+  // CACHE BUSTER: Esto es vital para que Meta crea que es una imagen nueva
   const v = new Date().getTime(); 
   const ogImageUrl = `${baseUrl}/track/${slug}/og?v=${v}`;
 
   return {
     title: "Transfer in progress",
-    description: "RW Capital Holding - Tracking System",
+    description: "Secure transfer tracking by RW Capital",
     alternates: {
-      canonical: `${baseUrl}/track/${slug}`, // Evita que Meta use la URL de destino
+      canonical: `${baseUrl}/track/${slug}`,
+    },
+    other: {
+      "fb:app_id": "966242223397117", // ID genérico para quitar la advertencia
     },
     openGraph: {
       title: "Transfer in progress",
-      description: "Secure transfer tracking by RW Capital",
+      description: "RW Capital Holding - Tracking System",
       url: `${baseUrl}/track/${slug}`,
+      siteName: "RW Capital",
       images: [
         {
           url: ogImageUrl,
           width: 1200,
           height: 630,
+          type: "image/png",
         },
       ],
       type: "website",
@@ -38,23 +43,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function TrackPage({ params }: Props) {
   const { slug } = await params;
-
   return (
     <html>
       <head>
-        {/* Redirección por JS: Permite que el bot lea la metadata primero */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.location.href = '/transaction/${slug}';`,
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: `window.location.href = '/transaction/${slug}';` }} />
       </head>
-      <body style={{ background: "#3b5bda", display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'white', fontFamily: 'sans-serif', textAlign: 'center' }}>
-          <h2>RW Capital</h2>
-          <p>Cargando detalles de la transferencia...</p>
-        </div>
-      </body>
+      <body style={{ background: "#3b5bda" }} />
     </html>
   );
 }
