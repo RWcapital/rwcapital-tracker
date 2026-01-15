@@ -2,11 +2,9 @@ import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import React from "react";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
-export async function GET(
-  _req: NextRequest,
-) {
+export async function GET(_req: NextRequest) {
   return new ImageResponse(
     React.createElement(
       "div",
@@ -14,7 +12,7 @@ export async function GET(
         style: {
           width: "100%",
           height: "100%",
-          background: "#3b5bda", // Tu azul corporativo
+          background: "#3b5bda", // Azul solicitado
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -25,7 +23,7 @@ export async function GET(
         },
       },
       [
-        // 1. Logo Central (Icono de rayo o tu logo)
+        // Icono de Rayo / Logo
         React.createElement("div", {
           style: {
             display: "flex",
@@ -43,47 +41,15 @@ export async function GET(
           ])
         ]),
 
-        // 2. Nombre de la Empresa (Main Brand)
-        React.createElement(
-          "div",
-          {
-            style: {
-              fontSize: 64,
-              fontWeight: 900,
-              textAlign: "center",
-              letterSpacing: "-0.02em",
-              marginBottom: "10px",
-            },
-          },
-          "RW Capital Holding"
-        ),
-
-        // 3. Subtítulo descriptivo (Fijo)
-        React.createElement(
-          "div",
-          {
-            style: {
-              fontSize: 28,
-              textTransform: "uppercase",
-              letterSpacing: "0.25em",
-              fontWeight: 700,
-              opacity: 0.7,
-            },
-          },
-          "Transfer Tracking"
-        ),
-
-        // 4. Decoración Inferior (Barra estética)
+        // Nombre de la Empresa
         React.createElement("div", {
-          style: {
-            position: "absolute",
-            bottom: "0",
-            left: "0",
-            width: "100%",
-            height: "12px",
-            background: "rgba(255, 255, 255, 0.3)",
-          }
-        })
+          style: { fontSize: 64, fontWeight: 900, textAlign: "center", letterSpacing: "-0.02em", marginBottom: "10px" },
+        }, "RW Capital Holding"),
+
+        // Subtítulo
+        React.createElement("div", {
+          style: { fontSize: 28, textTransform: "uppercase", letterSpacing: "0.25em", fontWeight: 700, opacity: 0.7 },
+        }, "Transfer Tracking")
       ]
     ),
     { width: 1200, height: 630 }
