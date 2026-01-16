@@ -45,8 +45,10 @@ export async function GET(
     );
     
     let finalStatus = transfer.status;
+    let eventsDebug: any[] = [];
     if (eventsRes.ok) {
       const events = await eventsRes.json();
+      eventsDebug = events.slice(0, 5); // Primeros 5 para debug
       // Buscar evento que indique completitud
       const completionEvents = events.filter((e: any) => 
         e.type === 'COMPLETED' || 
@@ -125,6 +127,7 @@ export async function GET(
         wiseStatus: transfer.status,
         finalStatus: finalStatus,
         mappedStatus: mapped.publicStatus,
+        sampleEvents: eventsDebug,
       },
     });
   } catch (error: any) {
