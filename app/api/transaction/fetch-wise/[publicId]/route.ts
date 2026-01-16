@@ -94,6 +94,10 @@ export async function GET(
       ok: true,
       created: !existing,
       publicId,
+      debug: {
+        wiseStatus: transfer.status,
+        mappedStatus: mapped.publicStatus,
+      },
     });
   } catch (error: any) {
     console.error("FETCH WISE ERROR:", error);
