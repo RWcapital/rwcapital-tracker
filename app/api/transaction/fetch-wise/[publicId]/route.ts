@@ -40,7 +40,18 @@ export async function GET(
       hasTargetAccount: !!transfer.targetAccount
     });
     
-    const mapped = mapWiseStatus(transfer.status);
+    // Smart mapping: if outgoing_payment_sent for >48h, consider it completed
+    let finalStatus = transfer.status;
+    if (transfer.status === "outgoing_payment_sent" && transfer.created) {
+      const createdDate = new Date(transfer.created);
+      const hoursSinceCreated = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceCreated > 48) {
+        finalStatus = "completed";
+        console.log(`[FETCH-WISE] Auto-completed transfer ${publicId} (${hoursSinceCreated.toFixed(1)}h old)`);
+      }
+    }
+    
+    const mapped = mapWiseStatus(finalStatus);
 
     // 2️⃣ Obtener nombre del destinatario desde Wise
     let recipientName = "Cuenta Wise";
