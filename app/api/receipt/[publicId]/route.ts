@@ -234,6 +234,7 @@ export async function GET(
   row("Sending bank", "JP Morgan Chase Bank, N.A.");
   row("Sending SWIFT / BIC", "CHASUS33");
   row("Beneficiary name", tx.recipientName ?? "—");
+  row("Amount", `${formatAmount(tx.amount)} ${tx.currency}`);
   row("Receiving bank", "—");
   row("Receiving SWIFT / BIC", "—");
 
@@ -244,37 +245,63 @@ export async function GET(
     font: bold,
   });
 
-  card(p2, 50, 300, 495, 190);
+  // Crear páginas adicionales si hay muchos eventos
+  let timelineY = 460;
+  let currentPage = p2;
+  let pageNumber = 2;
 
-  y = 460;
-  tx.events.forEach((e) => {
-    p2.drawText(
-      `• ${formatDate(new Date(e.occurredAt))} — ${e.label}`,
+  tx.events.forEach((e, index) => {
+    // Si nos quedamos sin espacio, crear una nueva página
+    if (timelineY < 100) {
+      drawFooter(currentPage);
+      currentPage = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      pageNumber++;
+      currentPage.drawText(`Transfer timeline (continued)`, {
+        x: 50,
+        y: 780,
+        size: 16,
+        font: bold,
+      });
+      card(currentPage, 50, 100, 495, timelineY + 50);
+      timelineY = 720;
+    }
+
+    currentPage.drawText(
+      `${index + 1}. ${formatDate(new Date(e.occurredAt))}`,
       {
         x: 70,
-        y,
+        y: timelineY,
         size: 10,
-        font,
+        font: bold,
       }
     );
-    y -= 18;
+    timelineY -= 16;
+
+    currentPage.drawText(`${e.label}`, {
+      x: 90,
+      y: timelineY,
+      size: 9,
+      font,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    timelineY -= 20;
   });
 
-  drawFooter(p2);
+  drawFooter(currentPage);
 
   /* ──────────────────────────────
-     PAGE 3 — MT103 SAMPLE
+     LAST PAGE — MT103 SAMPLE
   ────────────────────────────── */
-  const p3 = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  const pLast = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
 
-  p3.drawText("MT103 sample", {
+  pLast.drawText("MT103 sample", {
     x: 50,
     y: 780,
     size: 16,
     font: bold,
   });
 
-  p3.drawText(
+  pLast.drawText(
     "For informational purposes only – not an official SWIFT message",
     {
       x: 50,
@@ -285,7 +312,7 @@ export async function GET(
     }
   );
 
-  card(p3, 40, 120, 515, 600);
+  card(pLast, 40, 120, 515, 600);
 
   const swift = `
 {1:F01TRWIUS35AXXX}
@@ -306,7 +333,7 @@ export async function GET(
 }
 `;
 
-  p3.drawText(swift.trim(), {
+  pLast.drawText(swift.trim(), {
     x: 55,
     y: 700,
     size: 9.5,
@@ -314,7 +341,7 @@ export async function GET(
     lineHeight: 14,
   });
 
-  drawFooter(p3);
+  drawFooter(pLast);
 
   /* ──────────────────────────────
      RESPONSE
