@@ -3,11 +3,11 @@ import Image from "next/image";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center px-4">
-      <div className="max-w-md w-full text-center bg-neutral-900 border border-neutral-800 rounded-xl p-8 animate-fade-up">
+    <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center px-4">
+      <div className="max-w-md w-full text-center bg-white border border-[#E6E8EB] rounded-2xl p-10 animate-fade-up shadow-sm">
 
         {/* LOGO */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-8">
           <Image
             src="/logo.png"
             alt="RW Capital Holding"
@@ -17,29 +17,32 @@ export default function NotFound() {
           />
         </div>
 
+        {/* LÍNEA DECORATIVA */}
+        <div className="w-12 h-1 bg-[#3B5BDB] rounded-full mx-auto mb-6"></div>
+
         {/* ERROR CODE */}
-        <h1 className="text-5xl font-bold text-yellow-500 mb-2">
+        <h1 className="text-6xl font-bold text-[#3B5BDB] mb-3">
           404
         </h1>
 
-        <p className="text-lg font-medium mb-2">
-          Esta página no existe
+        <p className="text-xl font-semibold text-[#0A0A0A] mb-3">
+          Página no encontrada
         </p>
 
-        <p className="text-sm text-neutral-400 mb-6">
-          El enlace que estás buscando no es válido o la transacción no fue encontrada.
+        <p className="text-sm text-[#6B7280] mb-8">
+          El enlace que estás buscando no es válido o la transacción no fue encontrada. Verifica el código de seguimiento e intenta nuevamente.
         </p>
 
         {/* CTA */}
         <Link
           href="/"
-          className="inline-block w-full bg-yellow-500 hover:bg-yellow-400 text-black font-medium py-2 rounded-lg transition"
+          className="inline-block w-full bg-[#3B5BDB] hover:bg-[#2F4AC6] text-white font-semibold py-3 rounded-lg transition duration-200"
         >
           Volver al inicio
         </Link>
 
         {/* FOOTER */}
-        <div className="mt-6 text-xs text-neutral-500">
+        <div className="mt-8 text-xs text-[#9CA3AF]">
           RW Capital Holding · Transaction Tracker
         </div>
       </div>
