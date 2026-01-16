@@ -33,32 +33,12 @@ export async function GET(
 
     const transfer = await res.json();
     
-    // 1.5️⃣ Obtener eventos para detectar si realmente está completada
-    const eventsRes = await fetch(
-      `https://api.wise.com/v1/transfer-events?transferId=${publicId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.WISE_API_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    
+    // 1.5️⃣ Detectar si está completada por campos adicionales
     let finalStatus = transfer.status;
-    let eventsDebug: any[] = [];
-    if (eventsRes.ok) {
-      const events = await eventsRes.json();
-      eventsDebug = events.slice(0, 5); // Primeros 5 para debug
-      // Buscar evento que indique completitud
-      const completionEvents = events.filter((e: any) => 
-        e.type === 'COMPLETED' || 
-        e.type === 'FUNDS_ARRIVED' ||
-        e.description?.toLowerCase().includes('received') ||
-        e.description?.toLowerCase().includes('completada')
-      );
-      if (completionEvents.length > 0) {
-        finalStatus = 'completed';
-      }
+    
+    // Wise marca como completada cuando existe deliveredAt o completionTime
+    if (transfer.deliveredAt || transfer.completionTime) {
+      finalStatus = 'completed';
     }
     
     const mapped = mapWiseStatus(finalStatus);
@@ -127,7 +107,8 @@ export async function GET(
         wiseStatus: transfer.status,
         finalStatus: finalStatus,
         mappedStatus: mapped.publicStatus,
-        sampleEvents: eventsDebug,
+        deliveredAt: transfer.deliveredAt,
+        completionTime: transfer.completionTime,
       },
     });
   } catch (error: any) {
