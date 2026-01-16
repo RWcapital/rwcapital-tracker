@@ -32,6 +32,14 @@ export async function GET(
     }
 
     const transfer = await res.json();
+    
+    // Debug log
+    console.log(`[FETCH-WISE] Transfer ${publicId}:`, {
+      status: transfer.status,
+      id: transfer.id,
+      hasTargetAccount: !!transfer.targetAccount
+    });
+    
     const mapped = mapWiseStatus(transfer.status);
 
     // 2️⃣ Obtener nombre del destinatario desde Wise
@@ -94,6 +102,11 @@ export async function GET(
       ok: true,
       created: !existing,
       publicId,
+      debug: {
+        wiseStatus: transfer.status,
+        mappedStatus: mapped.publicStatus,
+        existingStatus: existing?.status
+      }
     });
   } catch (error: any) {
     console.error("FETCH WISE ERROR:", error);
