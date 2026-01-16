@@ -33,13 +33,6 @@ export async function GET(
 
     const transfer = await res.json();
     
-    // Debug log
-    console.log(`[FETCH-WISE] Transfer ${publicId}:`, {
-      status: transfer.status,
-      id: transfer.id,
-      hasTargetAccount: !!transfer.targetAccount
-    });
-    
     // Smart mapping: if outgoing_payment_sent for >48h, consider it completed
     let finalStatus = transfer.status;
     if (transfer.status === "outgoing_payment_sent" && transfer.created) {
@@ -47,7 +40,6 @@ export async function GET(
       const hoursSinceCreated = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60);
       if (hoursSinceCreated > 48) {
         finalStatus = "completed";
-        console.log(`[FETCH-WISE] Auto-completed transfer ${publicId} (${hoursSinceCreated.toFixed(1)}h old)`);
       }
     }
     
@@ -113,15 +105,6 @@ export async function GET(
       ok: true,
       created: !existing,
       publicId,
-      debug: {
-        wiseStatus: transfer.status,
-        mappedStatus: mapped.publicStatus,
-        existingStatus: existing?.status,
-        hasCompletedDate: !!transfer.completedDate,
-        completedDate: transfer.completedDate,
-        created: transfer.created,
-        updated: transfer.updated
-      }
     });
   } catch (error: any) {
     console.error("FETCH WISE ERROR:", error);
