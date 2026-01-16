@@ -109,11 +109,21 @@ export async function GET(
 
   p1.drawImage(logo, { x: 50, y: 780, width: 140, height: 40 });
 
+  // Línea decorativa
+  p1.drawRectangle({
+    x: 50,
+    y: 765,
+    width: 495,
+    height: 1,
+    color: rgb(0.2, 0.4, 0.8),
+  });
+
   p1.drawText("Transfer confirmation", {
     x: 50,
     y: 735,
     size: 24,
     font: bold,
+    color: rgb(0.05, 0.05, 0.05),
   });
 
   p1.drawText(
@@ -121,17 +131,18 @@ export async function GET(
     {
       x: 50,
       y: 708,
-      size: 10,
+      size: 9,
       font,
-      color: rgb(0.4, 0.4, 0.4),
+      color: rgb(0.5, 0.5, 0.5),
     }
   );
 
   p1.drawText("Transfer status", {
     x: 50,
     y: 670,
-    size: 14,
+    size: 13,
     font: bold,
+    color: rgb(0.1, 0.1, 0.1),
   });
 
   card(p1, 50, 520, 495, 130);
@@ -139,7 +150,7 @@ export async function GET(
   const statusRows = [
     ["Transfer ID", tx.publicId],
     ["Partner reference", tx.id],
-    ["Status", tx.status],
+    ["Status", tx.status.toUpperCase()],
     ["Created", formatDate(tx.createdAt)],
   ];
 
@@ -148,15 +159,16 @@ export async function GET(
     p1.drawText(l, {
       x: COL_LABEL,
       y,
-      size: 11,
+      size: 10,
       font,
-      color: rgb(0.45, 0.45, 0.45),
+      color: rgb(0.5, 0.5, 0.5),
     });
     p1.drawText(v, {
       x: COL_VALUE,
       y,
-      size: 11,
-      font,
+      size: 10,
+      font: bold,
+      color: rgb(0.1, 0.1, 0.1),
     });
     y -= 24;
   });
@@ -164,15 +176,16 @@ export async function GET(
   p1.drawText("Transfer overview", {
     x: 50,
     y: 480,
-    size: 14,
+    size: 13,
     font: bold,
+    color: rgb(0.1, 0.1, 0.1),
   });
 
   card(p1, 50, 300, 495, 150);
 
   const overview = [
     ["Amount sent", `${formatAmount(tx.amount)} ${tx.currency}`],
-    ["Transfer fees", "—"],
+    ["Recipient", tx.recipientName ?? tx.businessName],
     ["Exchange rate", "—"],
     ["Amount received", `${formatAmount(tx.amount)} ${tx.currency}`],
   ];
@@ -182,15 +195,16 @@ export async function GET(
     p1.drawText(l, {
       x: COL_LABEL,
       y,
-      size: 11,
+      size: 10,
       font,
-      color: rgb(0.45, 0.45, 0.45),
+      color: rgb(0.5, 0.5, 0.5),
     });
     p1.drawText(v, {
       x: COL_VALUE,
       y,
-      size: 11,
-      font,
+      size: 10,
+      font: bold,
+      color: rgb(0.1, 0.1, 0.1),
     });
     y -= 28;
   });
@@ -207,6 +221,7 @@ export async function GET(
     y: 780,
     size: 16,
     font: bold,
+    color: rgb(0.05, 0.05, 0.05),
   });
 
   card(p2, 50, 600, 495, 160);
@@ -217,15 +232,16 @@ export async function GET(
     p2.drawText(l, {
       x: COL_LABEL,
       y,
-      size: 11,
+      size: 10,
       font,
-      color: rgb(0.45, 0.45, 0.45),
+      color: rgb(0.5, 0.5, 0.5),
     });
     p2.drawText(v, {
       x: COL_VALUE,
       y,
-      size: 11,
-      font,
+      size: 10,
+      font: bold,
+      color: rgb(0.1, 0.1, 0.1),
     });
     y -= 24;
   };
@@ -243,48 +259,74 @@ export async function GET(
     y: 520,
     size: 16,
     font: bold,
+    color: rgb(0.05, 0.05, 0.05),
   });
 
-  // Crear páginas adicionales si hay muchos eventos
+  // Dibujar timeline con páginas dinámicas
   let timelineY = 460;
   let currentPage = p2;
-  let pageNumber = 2;
+  let isFirstPage = true;
+
+  // Calcular altura necesaria para los eventos
+  const eventHeight = 36; // 16 (fecha) + 20 (descripción)
+  const totalEventHeight = tx.events.length * eventHeight;
+  let remainingHeight = 460 - 100; // espacio disponible en p2
 
   tx.events.forEach((e, index) => {
-    // Si nos quedamos sin espacio, crear una nueva página
-    if (timelineY < 100) {
+    // Si no hay espacio en la página actual, crear nueva página
+    if (timelineY < 120 && !isFirstPage) {
       drawFooter(currentPage);
       currentPage = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-      pageNumber++;
       currentPage.drawText(`Transfer timeline (continued)`, {
         x: 50,
         y: 780,
         size: 16,
         font: bold,
       });
-      card(currentPage, 50, 100, 495, timelineY + 50);
+      timelineY = 720;
+    } else if (timelineY < 120 && isFirstPage) {
+      // Primera página se va a llenar
+      drawFooter(currentPage);
+      currentPage = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      currentPage.drawText(`Transfer timeline`, {
+        x: 50,
+        y: 780,
+        size: 16,
+        font: bold,
+      });
+      isFirstPage = false;
       timelineY = 720;
     }
 
+    // Dibujar evento numerado
+    currentPage.drawText(`${index + 1}.`, {
+      x: 70,
+      y: timelineY,
+      size: 10,
+      font: bold,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+
     currentPage.drawText(
-      `${index + 1}. ${formatDate(new Date(e.occurredAt))}`,
+      `${formatDate(new Date(e.occurredAt))}`,
       {
-        x: 70,
+        x: 95,
         y: timelineY,
         size: 10,
         font: bold,
+        color: rgb(0.2, 0.2, 0.2),
       }
     );
-    timelineY -= 16;
+    timelineY -= 18;
 
     currentPage.drawText(`${e.label}`, {
-      x: 90,
+      x: 95,
       y: timelineY,
-      size: 9,
+      size: 9.5,
       font,
-      color: rgb(0.3, 0.3, 0.3),
+      color: rgb(0.4, 0.4, 0.4),
     });
-    timelineY -= 20;
+    timelineY -= 22;
   });
 
   drawFooter(currentPage);
@@ -299,6 +341,7 @@ export async function GET(
     y: 780,
     size: 16,
     font: bold,
+    color: rgb(0.05, 0.05, 0.05),
   });
 
   pLast.drawText(
@@ -308,14 +351,13 @@ export async function GET(
       y: 760,
       size: 9,
       font,
-      color: rgb(0.4, 0.4, 0.4),
+      color: rgb(0.5, 0.5, 0.5),
     }
   );
 
   card(pLast, 40, 120, 515, 600);
 
-  const swift = `
-{1:F01TRWIUS35AXXX}
+  const swift = `{1:F01TRWIUS35AXXX}
 {2:I103CITIUS33XXXN}
 {4:
 :20:${tx.publicId}
@@ -330,15 +372,15 @@ export async function GET(
 :59:${tx.recipientName ?? "BENEFICIARY"}
 :70:${tx.reference ?? "TRANSFER"}
 :71A:SHA
-}
-`;
+}`;
 
   pLast.drawText(swift.trim(), {
-    x: 55,
+    x: 60,
     y: 700,
-    size: 9.5,
+    size: 9,
     font: mono,
-    lineHeight: 14,
+    lineHeight: 13,
+    color: rgb(0.1, 0.1, 0.1),
   });
 
   drawFooter(pLast);
