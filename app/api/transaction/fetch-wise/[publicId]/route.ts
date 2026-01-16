@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/prisma";
+import { getRecipientNameFromWise } from "../../../../../lib/wiseRecipient";
 
 export const runtime = "nodejs";
 
@@ -39,13 +40,21 @@ export async function GET(
 
     const transfer = await res.json();
 
-    // 3️⃣ Crear transacción (idempotente)
+    // 3️⃣ Obtener nombre del destinatario desde Wise
+    let recipientName = "Cuenta Wise";
+    if (transfer.targetAccount) {
+      const resolved = await getRecipientNameFromWise(transfer.targetAccount);
+      if (resolved) recipientName = resolved;
+    }
+
+    // 4️⃣ Crear transacción (idempotente)
     await prisma.transaction.upsert({
       where: { publicId: transfer.id.toString() },
       create: {
         publicId: transfer.id.toString(),
         wiseTransferId: transfer.id.toString(),
         businessName: "RW Capital Holding, Inc.",
+        recipientName: recipientName,
         amount: transfer.sourceValue ?? 0,
         currency: transfer.sourceCurrency ?? "USD",
         status: transfer.status ?? "PROCESSING",

@@ -1,13 +1,12 @@
 export async function getRecipientNameFromWise(
-  accountId: number
+  targetAccountId: number
 ): Promise<string | null> {
   try {
     const res = await fetch(
-      `https://api.wise.com/v1/accounts/${accountId}`,
+      `https://api.wise.com/v1/accounts/${targetAccountId}`,
       {
         headers: {
           Authorization: `Bearer ${process.env.WISE_API_TOKEN}`,
-          "Content-Type": "application/json",
         },
       }
     );
@@ -16,12 +15,9 @@ export async function getRecipientNameFromWise(
 
     const data = await res.json();
 
-    return (
-      data.accountHolderName ??
-      data.details?.accountHolderName ??
-      null
-    );
-  } catch {
+    return data.accountHolderName ?? null;
+  } catch (error) {
+    console.error("WISE ACCOUNT LOOKUP ERROR:", error);
     return null;
   }
 }
