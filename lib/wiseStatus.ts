@@ -11,6 +11,7 @@ export type WiseStatus =
   | "outgoing_payment_failed"
   | "outgoing_payment_rejected"
   | "completed"
+  | "funds_arrived"
   | "cancelled"
   | "failed"
   | "charged_back"
@@ -87,6 +88,13 @@ export function mapWiseStatus(status: WiseStatus | string) {
         publicStatus: "COMPLETED",
         labelES: "Tu dinero debería haber llegado a tu banco",
         labelEN: "Your money should have arrived at your bank",
+      };
+
+    case "funds_arrived":
+      return {
+        publicStatus: "COMPLETED",
+        labelES: "El dinero ha llegado al banco del destinatario",
+        labelEN: "Funds have arrived at the recipient's bank",
       };
 
     case "cancelled":
