@@ -105,7 +105,11 @@ export async function GET(
       debug: {
         wiseStatus: transfer.status,
         mappedStatus: mapped.publicStatus,
-        existingStatus: existing?.status
+        existingStatus: existing?.status,
+        hasCompletedDate: !!transfer.completedDate,
+        completedDate: transfer.completedDate,
+        created: transfer.created,
+        updated: transfer.updated
       }
     });
   } catch (error: any) {
