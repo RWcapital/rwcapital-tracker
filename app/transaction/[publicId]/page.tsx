@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
+import AutoRefresh from "./AutoRefresh";
+import SSERefresh from "./SSERefresh";
 
 /* ──────────────────────────────
    METADATA
@@ -123,6 +125,9 @@ export default async function TransactionPage({
   params: Promise<{ publicId: string }>;
 }) {
   const { publicId } = await params;
+  
+  // Client auto-refresh for near real-time updates
+  // (renders a noop client component that refreshes the page periodically)
 
   // 1️⃣ Primer intento normal
   let tx = await prisma.transaction.findFirst({
@@ -209,6 +214,12 @@ export default async function TransactionPage({
   ────────────────────────────── */
   return (
   <div className="min-h-screen bg-[#F7F8FA] flex justify-center px-4 py-12">
+    {/* Auto-refresh (5s) as fallback to SSE */}
+    {/* @ts-expect-error Async Server Component boundary */}
+    <AutoRefresh publicId={publicId} />
+    {/* SSE push updates for instant refresh on events */}
+    {/* @ts-expect-error Async Server Component boundary */}
+    <SSERefresh publicId={publicId} />
     <div className="w-full max-w-2xl">
 
       {/* CARD PRINCIPAL */}

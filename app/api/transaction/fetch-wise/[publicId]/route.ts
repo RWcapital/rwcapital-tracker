@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/prisma";
 import { getRecipientNameFromWise } from "../../../../../lib/wiseRecipient";
+import { mapWiseStatus } from "../../../../../lib/wiseStatus";
+import { sseBroker } from "../../../../../lib/sse";
 
 export const runtime = "nodejs";
 
@@ -30,6 +32,7 @@ export async function GET(
     }
 
     const transfer = await res.json();
+    const mapped = mapWiseStatus(transfer.status);
 
     // 2️⃣ Obtener nombre del destinatario desde Wise
     let recipientName = "Cuenta Wise";
@@ -38,35 +41,58 @@ export async function GET(
       if (resolved) recipientName = resolved;
     }
 
-    // 3️⃣ Crear o actualizar transacción (idempotente)
-    await prisma.transaction.upsert({
-      where: { publicId: transfer.id.toString() },
-      create: {
-        publicId: transfer.id.toString(),
-        wiseTransferId: transfer.id.toString(),
-        businessName: "RW Capital Holding, Inc.",
-        recipientName: recipientName,
-        amount: transfer.sourceValue ?? 0,
-        currency: transfer.sourceCurrency ?? "USD",
-        status: transfer.status ?? "PROCESSING",
-        reference: transfer.reference ?? null,
-        events: {
-          create: {
-            label: "Transferencia detectada automáticamente",
-            occurredAt: transfer.created
-              ? new Date(transfer.created)
-              : new Date(),
+    // 3️⃣ Crear o actualizar transacción (idempotente) con estado mapeado y evento si cambia
+    const idStr = transfer.id.toString();
+
+    const existing = await prisma.transaction.findUnique({
+      where: { wiseTransferId: idStr },
+    });
+
+    if (!existing) {
+      await prisma.transaction.create({
+        data: {
+          publicId: idStr,
+          wiseTransferId: idStr,
+          businessName: "RW Capital Holding, Inc.",
+          recipientName,
+          amount: transfer.sourceValue ?? 0,
+          currency: transfer.sourceCurrency ?? "USD",
+          status: mapped.publicStatus,
+          reference: transfer.reference ?? null,
+          events: {
+            create: {
+              label: mapped.labelES,
+              occurredAt: transfer.created ? new Date(transfer.created) : new Date(),
+            },
           },
         },
-      },
-      update: {
-        recipientName: recipientName, // Actualizar si ya existe
-      },
-    });
+      });
+      sseBroker.publish(idStr, { type: "created", status: mapped.publicStatus });
+    } else if (existing.status !== mapped.publicStatus) {
+      await prisma.$transaction([
+        prisma.transaction.update({
+          where: { id: existing.id },
+          data: { status: mapped.publicStatus, updatedAt: new Date() },
+        }),
+        prisma.transactionEvent.create({
+          data: {
+            transactionId: existing.id,
+            label: mapped.labelES,
+            occurredAt: new Date(),
+          },
+        }),
+      ]);
+      sseBroker.publish(idStr, { type: "status", status: mapped.publicStatus });
+    } else if (existing.recipientName !== recipientName && recipientName) {
+      await prisma.transaction.update({
+        where: { id: existing.id },
+        data: { recipientName },
+      });
+    }
 
     return NextResponse.json({
       ok: true,
-      created: true,
+      created: !existing,
       publicId,
     });
   } catch (error: any) {

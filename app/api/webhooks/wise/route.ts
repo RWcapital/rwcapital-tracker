@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import crypto from "crypto";
 import { prisma } from "../../../../lib/prisma";
 import { mapWiseStatus } from "../../../../lib/wiseStatus";
+import { sseBroker } from "../../../../lib/sse";
 
 export const runtime = "nodejs";
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
        1️⃣ TRANSFER CREATED
     ────────────────────────────── */
     if (event_type === "transfer.created") {
-      await prisma.transaction.upsert({
+      const upserted = await prisma.transaction.upsert({
         where: { wiseTransferId: wiseId },
         create: {
           publicId: wiseId,
@@ -71,6 +72,9 @@ export async function POST(request: NextRequest) {
         update: {}, // idempotente
       });
 
+      // Notify listeners
+      sseBroker.publish(wiseId, { type: "created", status: "PENDING" });
+
       return NextResponse.json({ ok: true, upserted: true });
     }
 
@@ -80,7 +84,7 @@ export async function POST(request: NextRequest) {
     if (event_type === "transfer.status.changed") {
       const mapped = mapWiseStatus(data.status);
 
-      await prisma.transaction.upsert({
+      const updated = await prisma.transaction.upsert({
         where: { wiseTransferId: wiseId },
         create: {
           publicId: wiseId,
@@ -112,6 +116,8 @@ export async function POST(request: NextRequest) {
         ok: true,
         status: mapped.publicStatus,
       });
+      
+      // Unreachable, but keep structure consistent
     }
 
     /* ──────────────────────────────

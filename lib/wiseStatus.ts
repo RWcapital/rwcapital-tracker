@@ -4,13 +4,18 @@ export type WiseStatus =
   | "transfer.created"
   | "incoming_payment_waiting"
   | "incoming_payment_received"
+  | "funds_converted"
   | "processing"
   | "funds_sent"
   | "outgoing_payment_sent"
+  | "outgoing_payment_failed"
+  | "outgoing_payment_rejected"
   | "completed"
   | "cancelled"
   | "failed"
-  | "charged_back";
+  | "charged_back"
+  | "bounced_back"
+  | "funds_refunded";
 
 export function mapWiseStatus(status: WiseStatus | string) {
   switch (status) {
@@ -35,6 +40,13 @@ export function mapWiseStatus(status: WiseStatus | string) {
         labelEN: "Funds received from sender",
       };
 
+    case "funds_converted":
+      return {
+        publicStatus: "PROCESSING",
+        labelES: "Fondos convertidos, preparando el envío",
+        labelEN: "Funds converted, preparing payout",
+      };
+
     case "processing":
       return {
         publicStatus: "PROCESSING",
@@ -54,6 +66,20 @@ export function mapWiseStatus(status: WiseStatus | string) {
         publicStatus: "SENT",
         labelES: "El dinero se mueve a través de la red bancaria",
         labelEN: "Money is moving through the banking network",
+      };
+
+    case "outgoing_payment_failed":
+      return {
+        publicStatus: "FAILED",
+        labelES: "El banco rechazó el pago saliente",
+        labelEN: "Outgoing payment failed at bank",
+      };
+
+    case "outgoing_payment_rejected":
+      return {
+        publicStatus: "FAILED",
+        labelES: "El banco rechazó el pago",
+        labelEN: "Outgoing payment was rejected",
       };
 
     case "completed":
@@ -82,6 +108,20 @@ export function mapWiseStatus(status: WiseStatus | string) {
         publicStatus: "REVERSED",
         labelES: "La transferencia fue revertida",
         labelEN: "Transfer reversed",
+      };
+
+    case "bounced_back":
+      return {
+        publicStatus: "REVERSED",
+        labelES: "Los fondos rebotaron y fueron devueltos",
+        labelEN: "Funds bounced back and were returned",
+      };
+
+    case "funds_refunded":
+      return {
+        publicStatus: "REVERSED",
+        labelES: "Fondos reembolsados al remitente",
+        labelEN: "Funds refunded to sender",
       };
 
     default:
