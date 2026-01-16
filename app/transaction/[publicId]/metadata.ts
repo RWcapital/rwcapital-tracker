@@ -23,6 +23,11 @@ export async function generateMetadata(
   // 🔑 CLAVE: WhatsApp SOLO garantiza mostrar el title
   const title = `${amount} · ${recipient}`;
 
+  // Cache-buster fuerte: timestamp + random hash
+  const timestamp = new Date().getTime();
+  const randomId = Math.random().toString(36).substring(2, 8);
+  const ogImageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/transaction/${params.publicId}/og?t=${timestamp}&r=${randomId}`;
+
   return {
     title,
     description: "View transfer details",
@@ -31,7 +36,7 @@ export async function generateMetadata(
       description: "View transfer details",
       images: [
         {
-          url: `/transaction/${params.publicId}/og`,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
         },
