@@ -19,7 +19,10 @@ export type WiseStatus =
   | "funds_refunded";
 
 export function mapWiseStatus(status: WiseStatus | string) {
-  switch (status) {
+  // Normalize to lowercase for case-insensitive matching
+  const normalized = status.toLowerCase().trim();
+  
+  switch (normalized) {
     case "transfer.created":
       return {
         publicStatus: "CREATED",

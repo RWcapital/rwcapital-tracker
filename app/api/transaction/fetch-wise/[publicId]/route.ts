@@ -32,16 +32,7 @@ export async function GET(
     }
 
     const transfer = await res.json();
-    
-    // 1.5️⃣ Detectar si está completada por campos adicionales
-    let finalStatus = transfer.status;
-    
-    // Wise marca como completada cuando existe deliveredAt o completionTime
-    if (transfer.deliveredAt || transfer.completionTime) {
-      finalStatus = 'completed';
-    }
-    
-    const mapped = mapWiseStatus(finalStatus);
+    const mapped = mapWiseStatus(transfer.status);
 
     // 2️⃣ Obtener nombre del destinatario desde Wise
     let recipientName = "Cuenta Wise";
@@ -103,12 +94,6 @@ export async function GET(
       ok: true,
       created: !existing,
       publicId,
-      debug: {
-        wiseStatus: transfer.status,
-        finalStatus: finalStatus,
-        mappedStatus: mapped.publicStatus,
-        fullTransfer: transfer, // Mostrar todo
-      },
     });
   } catch (error: any) {
     console.error("FETCH WISE ERROR:", error);
