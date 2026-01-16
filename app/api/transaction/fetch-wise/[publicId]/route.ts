@@ -32,7 +32,34 @@ export async function GET(
     }
 
     const transfer = await res.json();
-    const mapped = mapWiseStatus(transfer.status);
+    
+    // 1.5️⃣ Obtener eventos para detectar si realmente está completada
+    const eventsRes = await fetch(
+      `https://api.wise.com/v1/transfer-events?transferId=${publicId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WISE_API_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    
+    let finalStatus = transfer.status;
+    if (eventsRes.ok) {
+      const events = await eventsRes.json();
+      // Buscar evento que indique completitud
+      const completionEvents = events.filter((e: any) => 
+        e.type === 'COMPLETED' || 
+        e.type === 'FUNDS_ARRIVED' ||
+        e.description?.toLowerCase().includes('received') ||
+        e.description?.toLowerCase().includes('completada')
+      );
+      if (completionEvents.length > 0) {
+        finalStatus = 'completed';
+      }
+    }
+    
+    const mapped = mapWiseStatus(finalStatus);
 
     // 2️⃣ Obtener nombre del destinatario desde Wise
     let recipientName = "Cuenta Wise";
@@ -96,6 +123,7 @@ export async function GET(
       publicId,
       debug: {
         wiseStatus: transfer.status,
+        finalStatus: finalStatus,
         mappedStatus: mapped.publicStatus,
       },
     });
