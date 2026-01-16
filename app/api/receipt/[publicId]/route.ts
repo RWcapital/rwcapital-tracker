@@ -224,7 +224,8 @@ export async function GET(
     color: rgb(0.05, 0.05, 0.05),
   });
 
-  card(p2, 50, 600, 495, 160);
+  // Sin borde para mejor legibilidad
+  // card(p2, 50, 600, 495, 160);
 
   y = 720;
 
