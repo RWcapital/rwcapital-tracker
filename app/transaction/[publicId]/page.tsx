@@ -2,37 +2,36 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
 
-
-
-
 /* ──────────────────────────────
    METADATA
 ────────────────────────────── */
 export async function generateMetadata(
-  { params }: { params: { publicId: string } }
+  { params }: { params: Promise<{ publicId: string }> }
 ): Promise<Metadata> {
+  const { publicId } = await params;
+
   const tx = await prisma.transaction.findFirst({
     where: {
       OR: [
-        { publicId: params.publicId },
-        { wiseTransferId: params.publicId },
+        { publicId },
+        { wiseTransferId: publicId },
       ],
     },
     select: {
       amount: true,
       currency: true,
       businessName: true,
-      recipientName: true, // ✅ IMPORTANTE
+      recipientName: true,
     },
   });
 
   if (!tx) {
     return {
-      title: "Transfer in progress",
-      description: "Transfer tracking",
+      title: "International Money Transfer - RW Capital Holding",
+      description: "Track your international money transfer securely with RW Capital Holding. Real-time status updates and detailed transfer information.",
       openGraph: {
-        title: "Transfer in progress",
-        description: "Transfer tracking",
+        title: "International Money Transfer - RW Capital Holding",
+        description: "Track your international money transfer securely with RW Capital Holding. Real-time status updates and detailed transfer information.",
       },
     };
   }
@@ -41,11 +40,16 @@ export async function generateMetadata(
     minimumFractionDigits: 2,
   });
 
-  // ✅ DESTINATARIO CORRECTO
   const recipient = tx.recipientName || tx.businessName;
 
-  const title = `${amount} ${tx.currency}`;
-  const description = `Arriving from ${recipient}`;
+  // Textos optimizados para redes sociales
+  const title = `${amount} ${tx.currency} International Transfer to ${recipient} - RW Capital`;
+  const description = `Track your international money transfer in real-time with RW Capital Holding. View current status, payment timeline, and complete transfer details. Secure transfer tracking system.`;
+
+  // Cache-buster fuerte
+  const timestamp = new Date().getTime();
+  const randomId = Math.random().toString(36).substring(2, 8);
+  const ogImageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/transaction/${publicId}/og?t=${timestamp}&r=${randomId}`;
 
   return {
     title,
@@ -53,13 +57,23 @@ export async function generateMetadata(
     openGraph: {
       title,
       description,
+      url: `${process.env.NEXT_PUBLIC_BASE_URL}/transaction/${publicId}`,
+      siteName: "RW Capital Holding",
+      type: "website",
       images: [
         {
-          url: `/transaction/${params.publicId}/og`,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
+          alt: `${amount} ${tx.currency} transfer to ${recipient}`,
         },
       ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImageUrl],
     },
   };
 }
