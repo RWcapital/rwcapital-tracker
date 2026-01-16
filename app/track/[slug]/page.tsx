@@ -13,9 +13,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Extraer publicId del slug (ej: "1912280005-x8k2j" → "1912280005")
   const publicId = slug.split("-").slice(0, -1).join("-") || slug;
   
-  // CACHE BUSTER: Esto es vital para que Meta crea que es una imagen nueva
-  const v = new Date().getTime(); 
-  const ogImageUrl = `${baseUrl}/track/${slug}/og?v=${v}`;
+  // CACHE BUSTER: Timestamp + random hash para forzar refresh en WhatsApp
+  const timestamp = new Date().getTime(); 
+  const randomId = Math.random().toString(36).substring(2, 8);
+  const ogImageUrl = `${baseUrl}/track/${slug}/og?t=${timestamp}&r=${randomId}`;
 
   return {
     title: "Transfer in progress",

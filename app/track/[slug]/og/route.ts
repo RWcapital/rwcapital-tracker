@@ -1,56 +1,152 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
 import React from "react";
 
-// Forzamos que no haya caché en el servidor para esta ruta
 export const dynamic = "force-dynamic";
-export const runtime = "edge";
+export const runtime = "nodejs";
 
-export async function GET(_req: NextRequest) {
-  return new ImageResponse(
-    React.createElement(
-      "div",
-      {
-        style: {
-          width: "100%",
-          height: "100%",
-          background: "#3b5bda", // EL AZUL SOLICITADO
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "80px",
-          color: "#ffffff",
-        },
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+
+    // Extraer publicId del slug (ej: "1912280005-x8k2j" → "1912280005")
+    const publicId = slug.split("-").slice(0, -1).join("-") || slug;
+
+    // Obtener datos de la transacción
+    const tx = await prisma.transaction.findFirst({
+      where: {
+        OR: [
+          { publicId },
+          { wiseTransferId: publicId },
+        ],
       },
-      [
-        // Círculo con Rayo (Blanco)
-        React.createElement("div", {
+      select: {
+        amount: true,
+        currency: true,
+        recipientName: true,
+        businessName: true,
+      },
+    });
+
+    if (!tx) {
+      return new ImageResponse(
+        React.createElement(
+          "div",
+          {
+            style: {
+              width: "100%",
+              height: "100%",
+              background: "#3B5BDB",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ffffff",
+              fontSize: 48,
+              fontWeight: "bold",
+            },
+          },
+          "Transfer not found"
+        ),
+        { width: 1200, height: 630 }
+      );
+    }
+
+    const amount = Number(tx.amount).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    const recipient = tx.recipientName && tx.recipientName.trim() 
+      ? tx.recipientName 
+      : tx.businessName;
+
+    return new ImageResponse(
+      React.createElement(
+        "div",
+        {
           style: {
+            width: "100%",
+            height: "100%",
+            background: "#3B5BDB",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            width: "140px",
-            height: "140px",
-            borderRadius: "70px",
-            background: "rgba(255, 255, 255, 0.2)",
-            marginBottom: "30px",
-          }
-        }, [
-          React.createElement("svg", { width: "70", height: "70", viewBox: "0 0 24 24", fill: "none" }, [
-            React.createElement("path", { d: "M4 4h10l-2 6h8l-10 10 2-6H4l2-6z", fill: "white" })
-          ])
-        ]),
-        // Texto Principal
-        React.createElement("div", {
-          style: { fontSize: 70, fontWeight: "bold", marginBottom: "10px" },
-        }, "RW Capital"),
-        // Subtítulo
-        React.createElement("div", {
-          style: { fontSize: 30, opacity: 0.8, textTransform: "uppercase", letterSpacing: "4px" },
-        }, "Transfer Tracking")
-      ]
-    ),
-    { width: 1200, height: 630 }
-  );
+            padding: "60px",
+            color: "#ffffff",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+          },
+        },
+        [
+          // Logo / Branding
+          React.createElement(
+            "div",
+            {
+              style: {
+                fontSize: 32,
+                fontWeight: "bold",
+                marginBottom: "40px",
+                opacity: 0.9,
+              },
+            },
+            "RW Capital"
+          ),
+
+          // Monto principal
+          React.createElement(
+            "div",
+            {
+              style: {
+                fontSize: 96,
+                fontWeight: "bold",
+                marginBottom: "20px",
+                textAlign: "center",
+              },
+            },
+            `${amount} ${tx.currency}`
+          ),
+
+          // Destinatario
+          React.createElement(
+            "div",
+            {
+              style: {
+                fontSize: 42,
+                fontWeight: "600",
+                marginBottom: "40px",
+                textAlign: "center",
+                opacity: 0.95,
+              },
+            },
+            `→ ${recipient}`
+          ),
+
+          // Subtítulo
+          React.createElement(
+            "div",
+            {
+              style: {
+                fontSize: 24,
+                opacity: 0.8,
+                textAlign: "center",
+                marginTop: "20px",
+              },
+            },
+            "Transfer in progress"
+          ),
+        ]
+      ),
+      { width: 1200, height: 630 }
+    );
+  } catch (error) {
+    console.error("OG IMAGE ERROR:", error);
+    return new ImageResponse(
+      React.createElement("div", { style: { background: "#3B5BDB" } }),
+      { width: 1200, height: 630 }
+    );
+  }
 }
