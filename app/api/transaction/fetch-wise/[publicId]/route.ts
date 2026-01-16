@@ -107,8 +107,7 @@ export async function GET(
         wiseStatus: transfer.status,
         finalStatus: finalStatus,
         mappedStatus: mapped.publicStatus,
-        deliveredAt: transfer.deliveredAt,
-        completionTime: transfer.completionTime,
+        fullTransfer: transfer, // Mostrar todo
       },
     });
   } catch (error: any) {
