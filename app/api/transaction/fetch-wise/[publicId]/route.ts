@@ -11,16 +11,7 @@ export async function GET(
   try {
     const { publicId } = await params;
 
-    // 1️⃣ Si ya existe, no hacer nada
-    const existing = await prisma.transaction.findUnique({
-      where: { publicId },
-    });
-
-    if (existing) {
-      return NextResponse.json({ ok: true, existing: true });
-    }
-
-    // 2️⃣ Consultar Wise por ID directo
+    // 1️⃣ Consultar Wise por ID directo
     const res = await fetch(
       `https://api.wise.com/v1/transfers/${publicId}`,
       {
@@ -40,14 +31,14 @@ export async function GET(
 
     const transfer = await res.json();
 
-    // 3️⃣ Obtener nombre del destinatario desde Wise
+    // 2️⃣ Obtener nombre del destinatario desde Wise
     let recipientName = "Cuenta Wise";
     if (transfer.targetAccount) {
       const resolved = await getRecipientNameFromWise(transfer.targetAccount);
       if (resolved) recipientName = resolved;
     }
 
-    // 4️⃣ Crear transacción (idempotente)
+    // 3️⃣ Crear o actualizar transacción (idempotente)
     await prisma.transaction.upsert({
       where: { publicId: transfer.id.toString() },
       create: {
@@ -68,7 +59,9 @@ export async function GET(
           },
         },
       },
-      update: {}, // idempotente
+      update: {
+        recipientName: recipientName, // Actualizar si ya existe
+      },
     });
 
     return NextResponse.json({
