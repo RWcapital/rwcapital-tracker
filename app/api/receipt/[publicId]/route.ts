@@ -266,27 +266,48 @@ export async function GET(
     color: rgb(0.05, 0.05, 0.05),
   });
 
+  // Enriquecido timeline (misma lógica que la página web)
+  const CBPAY_STEPS = [
+    { key: "CREATED", label: "Creaste tu transferencia" },
+    { key: "FUNDS_TAKEN", label: "Hemos tomado los fondos" },
+    { key: "SENT", label: "Hemos enviado tus USD" },
+    { key: "PROCESSING_BY_BANK", label: "El banco está procesando la transferencia" },
+    { key: "COMPLETED", label: "Transferencia completada" },
+  ];
+
+  const normalize = (str: string) =>
+    str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const mapStatusToStep = (status: string) => {
+    const s = status.toUpperCase();
+    if (["CREATED", "PENDING"].includes(s)) return "CREATED";
+    if (["FUNDS_RECEIVED", "FUNDS_TAKEN"].includes(s)) return "FUNDS_TAKEN";
+    if (["SENT", "FUNDS_SENT", "OUTGOING_PAYMENT_SENT"].includes(s)) return "SENT";
+    if (["PROCESSING", "PROCESSING_BY_BANK"].includes(s)) return "PROCESSING_BY_BANK";
+    if (["COMPLETED", "SUCCESS"].includes(s)) return "COMPLETED";
+    return "PROCESSING_BY_BANK";
+  };
+
+  const currentStepKey = mapStatusToStep(tx.status);
+  const currentStepIndex = CBPAY_STEPS.findIndex((s) => s.key === currentStepKey);
+
+  const enrichedTimeline = CBPAY_STEPS.map((step, index) => {
+    const relatedEvent = tx.events.find((e) =>
+      normalize(e.label).includes(normalize(step.label))
+    );
+    return {
+      label: step.label,
+      completed: index <= currentStepIndex,
+      date: relatedEvent?.occurredAt ?? (index <= currentStepIndex ? tx.updatedAt : null),
+    };
+  });
+
   // Dibujar timeline con páginas dinámicas
   let timelineY = 460;
   let currentPage = p2;
   let isFirstPage = true;
 
-  // Calcular altura necesaria para los eventos
-  const eventHeight = 36; // 16 (fecha) + 20 (descripción)
-  const totalEventHeight = tx.events.length * eventHeight;
-  let remainingHeight = 460 - 100; // espacio disponible en p2
-
-  if (tx.events.length === 0) {
-    currentPage.drawText("No hay eventos de la transferencia disponibles.", {
-      x: 50,
-      y: timelineY,
-      size: 10,
-      font,
-      color: rgb(0.4, 0.4, 0.4),
-    });
-  }
-
-  tx.events.forEach((e, index) => {
+  enrichedTimeline.forEach((e, index) => {
     // Si no hay espacio en la página actual, crear nueva página
     if (timelineY < 120 && !isFirstPage) {
       drawFooter(currentPage);
@@ -321,16 +342,17 @@ export async function GET(
       color: ACCENT,
     });
 
-    currentPage.drawText(
-      `${formatDate(new Date(e.occurredAt))}`,
-      {
-        x: 95,
-        y: timelineY,
-        size: 10,
-        font: bold,
-        color: rgb(0.2, 0.2, 0.2),
-      }
-    );
+    const displayDate = e.date 
+      ? formatDate(new Date(e.date))
+      : "Pendiente";
+
+    currentPage.drawText(displayDate, {
+      x: 95,
+      y: timelineY,
+      size: 10,
+      font: bold,
+      color: e.completed ? rgb(0.2, 0.2, 0.2) : rgb(0.5, 0.5, 0.5),
+    });
     timelineY -= 18;
 
     currentPage.drawText(`${e.label}`, {
@@ -338,7 +360,7 @@ export async function GET(
       y: timelineY,
       size: 9.5,
       font,
-      color: rgb(0.4, 0.4, 0.4),
+      color: e.completed ? rgb(0.4, 0.4, 0.4) : rgb(0.6, 0.6, 0.6),
     });
     timelineY -= 22;
   });
